@@ -65,8 +65,8 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	testingPage(resp, req)*/
 	case "/app/test/":
 		testingPage(resp, req)
-	case "app/test"
-		testingPage(resp,req)
+	case "app/test":
+		testingPage(resp, req)
 	}
 }
 
