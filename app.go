@@ -4,24 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"html/template"
-	"log"
 	"net"
 	"net/http"
 	"net/http/fcgi"
 	"os"
+	"path/filepath"
 
 	_ "github.com/go-sql-driver/mysql"
 )
-
-func Debug() {
-	//This prints stuff in the console so i get info, just for me
-	dir, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-		fmt.Printf("Error happened!!! Here, take it: %v", err)
-	}
-	fmt.Println(dir)
-}
 
 type FastCGIServer struct{}
 type tData struct {
@@ -71,19 +61,20 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	fmt.Printf("URL is: %v\n", req.URL.Path)
 
 	switch req.URL.Path {
-	default:
-		appPage(resp, req)
 	/*case "/app/main/":
 	testingPage(resp, req)*/
 	case "/app/test/":
 		testingPage(resp, req)
 	case "/app/test":
 		testingPage(resp, req)
+	default:
+		appPage(resp, req)
 	}
 }
 
 //When everything gets set up, all page setup above this
 func main() {
+
 	fmt.Println("Starting the program.")
 	listener, _ := net.Listen("tcp", "127.0.0.1:9001")
 	fmt.Println("Started the listener.")
@@ -98,6 +89,15 @@ func main() {
 		fmt.Println("Oh noez, could not connect to database")
 		return
 	}
+
+	//Debug:
+	//This prints stuff in the console so i get info, just for me
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		fmt.Printf("Error happened!!! Here, take it: %v", err)
+	}
+	fmt.Printf("DIR: %v", dir)
+	//end of Debug
 
 	fcgi.Serve(listener, srv) //end of request
 }
