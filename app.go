@@ -4,12 +4,24 @@ import (
 	"database/sql"
 	"fmt"
 	"html/template"
+	"log"
 	"net"
 	"net/http"
 	"net/http/fcgi"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
 )
+
+func Debug() {
+	//This prints stuff in the console so i get info, just for me
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+		fmt.Printf("Error happened!!! Here, take it: %v", err)
+	}
+	fmt.Println(dir)
+}
 
 type FastCGIServer struct{}
 type tData struct {
@@ -27,7 +39,7 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 	field := req.FormValue("fn")
 	fmt.Println(field)
 	tData := tData{
-		Fn: field,
+		Tn: field,
 	}
 	if err = firstPageTemplate.Execute(resp, tData); err != nil {
 		fmt.Printf("template execute error: %v", err)
@@ -65,7 +77,7 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	testingPage(resp, req)*/
 	case "/app/test/":
 		testingPage(resp, req)
-	case "app/test":
+	case "/app/test":
 		testingPage(resp, req)
 	}
 }
