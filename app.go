@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
-	"path/filepath"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -92,7 +91,7 @@ func main() {
 
 	//Debug:
 	//This prints stuff in the console so i get info, just for me
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	dir, err := os.Getwd()
 	if err != nil {
 		fmt.Printf("Error happened!!! Here, take it: %v", err)
 	}
