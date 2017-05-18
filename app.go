@@ -4,12 +4,19 @@ import (
 	"database/sql"
 	"fmt"
 	"html/template"
+	"io"
 	"net"
 	"net/http"
 	"net/http/fcgi"
 	"os"
+	"strconv"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+)
+
+const (
+	defaultImg = "/home/gideon/work/imgsrvr/testingpics/Graphic1.jpg"
 )
 
 type FastCGIServer struct{}
@@ -18,8 +25,8 @@ type tData struct {
 	Tn string
 }
 
+//First page Stuff!
 func appPage(resp http.ResponseWriter, req *http.Request) {
-	//First page Stuff!
 	firstPageTemplate := template.New("first page templated.")
 	firstPageTemplate, err := firstPageTemplate.Parse(firstPage)
 	if err != nil {
@@ -35,8 +42,8 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
+//testingPage!!!
 func testingPage(resp http.ResponseWriter, req *http.Request) {
-	//testingPage!!!
 	testPageTemplate := template.New("test page templated.")
 	testPageTemplate, err := testPageTemplate.Parse(testPage)
 	if err != nil {
@@ -52,6 +59,42 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// Page for sending pics
+func sendImg(resp http.ResponseWriter, req *http.Request) {
+	//Check if file exists and open
+	openfile, err := os.Open(defaultImg)
+	defer openfile.Close() //Close after function return
+	if err != nil {
+		//File not found, send 404
+		http.Error(resp, "File not found.", 404)
+		return
+	}
+
+	//File is found, create and send the correct headers
+
+	//Get the Content-Type of the file
+	//Create a buffer to store the header of the file in
+	fileHeader := make([]byte, 512)
+	//Copy the headers into the FileHeader buffer
+	openfile.Read(fileHeader)
+	//Get content type of file
+	fileContentType := http.DetectContentType(fileHeader)
+	//Get the file size
+	fileStat, _ := openfile.Stat()                     //Get info from file
+	fileSize := strconv.FormatInt(fileStat.Size(), 10) //Get file size as a string
+
+	//Send the headers
+	//resp.Header().Set("Content-Disposition", "attachment; filename="+Filename)
+	resp.Header().Set("Content-Type", fileContentType)
+	resp.Header().Set("Content-Length", fileSize)
+
+	//Send the file
+	//We read 512 bytes from the file already so we reset the offset back to 0
+	openfile.Seek(0, 0)
+	io.Copy(resp, openfile) //'Copy' the file to the client
+	return
+}
+
 func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	fmt.Println("the req arrived")
 	if req.Body == nil {
@@ -59,13 +102,14 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 	fmt.Printf("URL is: %v\n", req.URL.Path)
 
-	switch req.URL.Path {
+	//TODO: Quality check URL before switch
+	switch strings.Split(req.URL.Path, "/")[2] {
 	/*case "/app/main/":
 	testingPage(resp, req)*/
-	case "/app/test/":
+	case "test":
 		testingPage(resp, req)
-	case "/app/test":
-		testingPage(resp, req)
+	case "i":
+		sendImg(resp, req)
 	default:
 		appPage(resp, req)
 	}

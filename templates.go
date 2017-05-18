@@ -35,7 +35,7 @@ var (
   <body>
   testing text<br>
   and moar testing text!!!<br>
-  And a testing graphic!!!<img src="./testingpics/Graphic1.jpg" alt="Testing Graphic" style="height:500;width:500">
+  And a testing graphic!!!<img src="/app/i" alt="Testing Graphic" >
 
   <p>
   field from request: {{ .Tn}}
