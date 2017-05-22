@@ -16,7 +16,9 @@ import (
 )
 
 const (
+	urlPrefix  = "/app/"
 	defaultImg = "/home/gideon/work/imgsrvr/testingpics/Graphic1.jpg"
+	imgHash    = 6
 )
 
 type FastCGIServer struct{}
@@ -60,18 +62,12 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 }
 
 // Page for sending pics
-func sendImg(resp http.ResponseWriter, req *http.Request) {
-	//Isolate the file name.
-	imgName := strings.Split(req.URL.Path, "/")[3]
-	/*switch ImgName {
-
-		case "":
-			sendImg(resp, req)
-		default:
-
-	}*/
+func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
+	if len(img) != imgHash {
+		img = defaultImg
+	}
 	//Check if file exists and open
-	openfile, err := os.Open(imgName)
+	openfile, err := os.Open(img)
 	defer openfile.Close() //Close after function return
 	if err != nil {
 		//File not found, send 404
@@ -104,6 +100,13 @@ func sendImg(resp http.ResponseWriter, req *http.Request) {
 	return
 }
 
+func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
+	resp.WriteHeader(status)
+	if status == http.StatusNotFound {
+		fmt.Fprint(resp, "custom 404")
+	}
+}
+
 func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	fmt.Println("the req arrived")
 	if req.Body == nil {
@@ -120,18 +123,22 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	urlSplit := strings.Split(req.URL.Path, "/")
 	urlECount := len(urlSplit)
 	fmt.Println(urlECount)
-	switch urlECount {
-	case 1:
-
+	if urlECount < 3 {
+		errorHandler(resp, req, http.StatusNotFound)
+	}
+	if !strings.HasPrefix(req.URL.Path, urlPrefix) {
+		errorHandler(resp, req, http.StatusNotFound)
 	}
 
-	switch strings.Split(req.URL.Path, "/")[2] {
-	/*case "/app/main/":
-	testingPage(resp, req)*/
+	// Now URL looks like "urlPrefix/foo"
+	switch urlSplit[2] {
 	case "test":
 		testingPage(resp, req)
 	case "i":
-		sendImg(resp, req)
+		if urlECount != 4 {
+			errorHandler(resp, req, http.StatusNotFound)
+		}
+		sendImg(resp, req, urlSplit[3])
 	default:
 		appPage(resp, req)
 	}
@@ -161,7 +168,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error happened!!! Here, take it: %v", err)
 	}
-	fmt.Printf("DIR: %v", dir)
+	fmt.Printf("DIR: %v\n", dir)
 	//end of Debug
 
 	fcgi.Serve(listener, srv) //end of request
