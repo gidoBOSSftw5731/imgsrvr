@@ -121,7 +121,7 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	urlECount := len(urlSplit)
 	fmt.Println(urlECount)
 	switch urlECount {
-	case "1":
+	case 1:
 
 	}
 
