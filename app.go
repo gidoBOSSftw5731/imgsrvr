@@ -61,8 +61,17 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 
 // Page for sending pics
 func sendImg(resp http.ResponseWriter, req *http.Request) {
+	//Isolate the file name.
+	imgName := strings.Split(req.URL.Path, "/")[3]
+	/*switch ImgName {
+
+		case "":
+			sendImg(resp, req)
+		default:
+
+	}*/
 	//Check if file exists and open
-	openfile, err := os.Open(defaultImg)
+	openfile, err := os.Open(imgName)
 	defer openfile.Close() //Close after function return
 	if err != nil {
 		//File not found, send 404
@@ -102,7 +111,20 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 	fmt.Printf("URL is: %v\n", req.URL.Path)
 
-	//TODO: Quality check URL before switch
+	/*TODO: Quality check URL before switch
+	Quality check = make sure the URL wont kill the script on the switch statement.
+	Things to look for: How many "elements" are in the URL
+	make sure it fits the pattern (/app/foo)
+
+	*/
+	urlSplit := strings.Split(req.URL.Path, "/")
+	urlECount := len(urlSplit)
+	fmt.Println(urlECount)
+	switch urlECount {
+	case "1":
+
+	}
+
 	switch strings.Split(req.URL.Path, "/")[2] {
 	/*case "/app/main/":
 	testingPage(resp, req)*/
