@@ -117,17 +117,21 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	/*TODO: Quality check URL before switch
 	Quality check = make sure the URL wont kill the script on the switch statement.
 	Things to look for: How many "elements" are in the URL
-	make sure it fits the pattern (/app/foo)
+
 
 	*/
 	urlSplit := strings.Split(req.URL.Path, "/")
 	urlECount := len(urlSplit)
-	fmt.Println(urlECount)
+	fmt.Printf("urlECount: %d\n", urlECount)
+	// Checking amt of elements in url (else sends 404)
 	if urlECount < 3 {
 		errorHandler(resp, req, http.StatusNotFound)
+		return
 	}
+	// Check for prefix
 	if !strings.HasPrefix(req.URL.Path, urlPrefix) {
 		errorHandler(resp, req, http.StatusNotFound)
+		return
 	}
 
 	// Now URL looks like "urlPrefix/foo"
@@ -135,9 +139,13 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	case "test":
 		testingPage(resp, req)
 	case "i":
+		// Checks for hash/element/thing
 		if urlECount != 4 {
 			errorHandler(resp, req, http.StatusNotFound)
+			return
 		}
+		fmt.Printf("urlECount of IMG: %d\n", urlECount)
+		fmt.Printf("Split for image: %v\n", urlSplit)
 		sendImg(resp, req, urlSplit[3])
 	default:
 		appPage(resp, req)
