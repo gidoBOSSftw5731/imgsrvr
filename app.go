@@ -17,7 +17,7 @@ import (
 
 const (
 	urlPrefix  = "/app/"
-	defaultImg = "/home/gideon/work/imgsrvr/testingpics/Graphic1.jpg"
+	defaultImg = "/home/gideon/work/imgsrvr/testingpics/Graphic1-50.jpg"
 	imgHash    = 6
 )
 
@@ -37,7 +37,7 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 	field := req.FormValue("fn")
 	fmt.Println(field)
 	tData := tData{
-		Tn: field,
+		Fn: field,
 	}
 	if err = firstPageTemplate.Execute(resp, tData); err != nil {
 		fmt.Printf("template execute error: %v", err)
