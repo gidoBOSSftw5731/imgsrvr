@@ -20,6 +20,7 @@ field from request: {{ .Fn}}
 <form action="/app/test/" method="POST">
   First name: <input type="text" name="fn"><br>
   Last name: <input type="text" name="tn"><br>
+	IMG: <input type="file" name="img"><br>
   <input type="submit" value="Go!">
 </form>
 
