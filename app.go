@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -19,6 +20,7 @@ const (
 	urlPrefix  = "/app/"
 	defaultImg = "/home/gideon/work/imgsrvr/testingpics/Graphic1-50.jpg"
 	imgHash    = 6
+	imgStore   = "/var/tmp/imgStorage"
 )
 
 type FastCGIServer struct{}
@@ -34,6 +36,15 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Printf("Failed to parse template: %v", err)
 	}
+	/* TODO:
+	Check for file content
+	read content > variable
+	store file on disk:
+	-create name (from md5..? (TBD))
+	-make sure DIR is existant
+	-create a map/index of pub name (hash) to path
+	provide path to file
+	*/
 	field := req.FormValue("fn")
 	fmt.Println(field)
 	tData := tData{
@@ -152,8 +163,19 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// createImgDir creates all image storage directories
+func createImgDir(imgStore string) {
+	for f := 0; f < 16; f++ {
+		for s := 0; s < 16; s++ {
+			os.MkdirAll(filepath.Join(imgStore, fmt.Sprintf("%x/%x", f, s)), 0755)
+		}
+	}
+}
+
 //When everything gets set up, all page setup above this
 func main() {
+
+	go createImgDir(imgStore)
 
 	fmt.Println("Starting the program.")
 	listener, _ := net.Listen("tcp", "127.0.0.1:9001")
