@@ -35,16 +35,8 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 	firstPageTemplate, err := firstPageTemplate.Parse(firstPage)
 	if err != nil {
 		fmt.Printf("Failed to parse template: %v", err)
+		return
 	}
-	/* TODO:
-	Check for file content
-	read content > variable
-	store file on disk:
-	-create name (from md5..? (TBD))
-	-make sure DIR is existant
-	-create a map/index of pub name (hash) to path
-	provide path to file
-	*/
 	field := req.FormValue("fn")
 	fmt.Println(field)
 	tData := tData{
@@ -52,15 +44,34 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 	}
 	if err = firstPageTemplate.Execute(resp, tData); err != nil {
 		fmt.Printf("template execute error: %v", err)
+		return
 	}
 }
 
 //testingPage!!!
 func testingPage(resp http.ResponseWriter, req *http.Request) {
+	/* TODO:
+	store file on disk:
+	-create name (from md5..? (TBD))
+	-make sure DIR is existant
+	-create a map/index of pub name (hash) to path
+	provide path to file
+	*/
+
+	req.ParseMultipartForm(32 << 20)
+	file, handler, err := req.FormFile("img")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+	fmt.Fprintf(resp, "%v", handler.Header)
+	// filename := fileHash
 	testPageTemplate := template.New("test page templated.")
-	testPageTemplate, err := testPageTemplate.Parse(testPage)
+	testPageTemplate, err = testPageTemplate.Parse(testPage)
 	if err != nil {
 		fmt.Printf("Failed to parse template: %v", err)
+		return
 	}
 	field := req.FormValue("tn")
 	fmt.Println(field)
@@ -69,6 +80,7 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	}
 	if err = testPageTemplate.Execute(resp, tData); err != nil {
 		fmt.Printf("template execute error: %v", err)
+		return
 	}
 }
 
@@ -170,6 +182,7 @@ func createImgDir(imgStore string) {
 			os.MkdirAll(filepath.Join(imgStore, fmt.Sprintf("%x/%x", f, s)), 0755)
 		}
 	}
+	fmt.Println("Finished making the directories!")
 }
 
 //When everything gets set up, all page setup above this
