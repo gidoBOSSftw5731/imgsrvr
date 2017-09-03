@@ -18,7 +18,7 @@ import (
 
 const (
 	urlPrefix  = "/app/"
-	defaultImg = "/home/gideon/work/imgsrvr/testingpics/Graphic1-50.jpg"
+	defaultImg = "/home/gido5731/work/imgsrvr/testingpics/Graphic1-50.jpg"
 	imgHash    = 6
 	imgStore   = "/var/tmp/imgStorage"
 )
@@ -53,11 +53,10 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	/* TODO:
 	store file on disk:
 	-create name (from md5..? (TBD))
-	-make sure DIR is existant
 	-create a map/index of pub name (hash) to path
 	provide path to file
 	*/
-
+	//Handling Uploading, will one day put into a func of its own, one day....
 	req.ParseMultipartForm(32 << 20)
 	file, handler, err := req.FormFile("img")
 	if err != nil {
@@ -66,6 +65,14 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	}
 	defer file.Close()
 	fmt.Fprintf(resp, "%v", handler.Header)
+	f, err := os.OpenFile("./test/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer f.Close()
+	io.Copy(f, file)
+
 	// filename := fileHash
 	testPageTemplate := template.New("test page templated.")
 	testPageTemplate, err = testPageTemplate.Parse(testPage)
@@ -137,12 +144,6 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 	fmt.Printf("URL is: %v\n", req.URL.Path)
 
-	/*TODO: Quality check URL before switch
-	Quality check = make sure the URL wont kill the script on the switch statement.
-	Things to look for: How many "elements" are in the URL
-
-
-	*/
 	urlSplit := strings.Split(req.URL.Path, "/")
 	urlECount := len(urlSplit)
 	fmt.Printf("urlECount: %d\n", urlECount)
@@ -182,7 +183,7 @@ func createImgDir(imgStore string) {
 			os.MkdirAll(filepath.Join(imgStore, fmt.Sprintf("%x/%x", f, s)), 0755)
 		}
 	}
-	fmt.Println("Finished making the directories!")
+	fmt.Println("Finished making/Verifying the directories!")
 }
 
 //When everything gets set up, all page setup above this
