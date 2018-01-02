@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"database/sql"
 	"fmt"
 	"html/template"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -52,7 +54,7 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 func testingPage(resp http.ResponseWriter, req *http.Request) {
 	/* TODO:
 	store file on disk:
-	-create name (from md5..? (TBD))
+	-create name (from md5)
 	-create a map/index of pub name (hash) to path
 	provide path to file
 	*/
@@ -61,7 +63,7 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	file, handler, err := req.FormFile("img")
 	if err != nil {
 		fmt.Println(err)
-		return
+		return //checks for file
 	}
 	defer file.Close()
 	fmt.Fprintf(resp, "%v", handler.Header)
@@ -77,7 +79,7 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	testPageTemplate := template.New("test page templated.")
 	testPageTemplate, err = testPageTemplate.Parse(testPage)
 	if err != nil {
-		fmt.Printf("Failed to parse template: %v", err)
+		fmt.Printf("Failed to parse template: %v", err) // this only happens if someone goofs the template file
 		return
 	}
 	field := req.FormValue("tn")
@@ -91,10 +93,38 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func upload(resp http.ResponseWriter, req *http.Request) {
+	fmt.Println("method:", req.Method)
+	if req.Method == "GET" {
+		crutime := time.Now().Unix()
+		md5 := md5.New()
+		io.WriteString(md5, strconv.FormatInt(crutime, 10))
+		token := fmt.Sprintf("%x", md5.Sum(nil))
+		t, _ := template.ParseFiles("upload.gtpl")
+		t.Execute(resp, token)
+	} else {
+		req.ParseMultipartForm(32 << 20)
+		file, handler, err := req.FormFile("img")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer file.Close()
+		fmt.Fprintf(resp, "%v", handler.Header)
+		f, err := os.OpenFile(imgStore+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer f.Close()
+		io.Copy(f, file)
+	}
+}
+
 // Page for sending pics
-func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
+/*func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	if len(img) != imgHash {
-		img = defaultImg
+		img = defaultImg //if no image existsa, use testing image
 	}
 	//Check if file exists and open
 	openfile, err := os.Open(img)
@@ -117,6 +147,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	//Get the file size
 	fileStat, _ := openfile.Stat()                     //Get info from file
 	fileSize := strconv.FormatInt(fileStat.Size(), 10) //Get file size as a string
+	fmt.Printf("Heres the file size: ", fileSize)
 
 	//Send the headers
 	//resp.Header().Set("Content-Disposition", "attachment; filename="+Filename)
@@ -128,7 +159,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	openfile.Seek(0, 0)
 	io.Copy(resp, openfile) //'Copy' the file to the client
 	return
-}
+} */
 
 func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
 	resp.WriteHeader(status)
@@ -170,7 +201,8 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 		fmt.Printf("urlECount of IMG: %d\n", urlECount)
 		fmt.Printf("Split for image: %v\n", urlSplit)
-		sendImg(resp, req, urlSplit[3])
+		//sendImg(resp, req, urlSplit[3])
+		upload(resp, req)
 	default:
 		appPage(resp, req)
 	}
