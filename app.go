@@ -74,7 +74,7 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	}
 	defer f.Close()
 	io.Copy(f, file)
-
+	upload(resp, req)
 	// filename := fileHash
 	testPageTemplate := template.New("test page templated.")
 	testPageTemplate, err = testPageTemplate.Parse(testPage)
@@ -94,11 +94,13 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 }
 
 func upload(resp http.ResponseWriter, req *http.Request) {
-	fmt.Println("method:", req.Method)
+
+	/*fmt.Println("method:", req.Method)
 	if req.Method == "GET" {
 		crutime := time.Now().Unix()
 		md5 := md5.New()
 		io.WriteString(md5, strconv.FormatInt(crutime, 10))
+		fmt.Printf("MD5:", md5)
 		token := fmt.Sprintf("%x", md5.Sum(nil))
 		t, _ := template.ParseFiles("upload.gtpl")
 		t.Execute(resp, token)
@@ -118,11 +120,16 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 		}
 		defer f.Close()
 		io.Copy(f, file)
+
+		
 	}
-}
+	
+}*/
+
+
 
 // Page for sending pics
-/*func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
+func (resp http.ResponseWriter, req *http.Request, img string)sendImg {
 	if len(img) != imgHash {
 		img = defaultImg //if no image existsa, use testing image
 	}
@@ -131,8 +138,7 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 	defer openfile.Close() //Close after function return
 	if err != nil {
 		//File not found, send 404
-		http.Error(resp, "File not found.", 404)
-		return
+		notFound(resp, req)
 	}
 
 	//File is found, create and send the correct headers
@@ -159,12 +165,13 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 	openfile.Seek(0, 0)
 	io.Copy(resp, openfile) //'Copy' the file to the client
 	return
-} */
+}
 
-func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
+func (resp http.ResponseWriter, req *http.Request, status int)errorHandler {
 	resp.WriteHeader(status)
 	if status == http.StatusNotFound {
 		fmt.Fprint(resp, "custom 404")
+		notFound(resp, req)
 	}
 }
 
