@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/md5"
 	"database/sql"
 	"fmt"
 	"html/template"
@@ -13,7 +12,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -29,6 +27,12 @@ type FastCGIServer struct{}
 type tData struct {
 	Fn string
 	Tn string
+}
+
+//404 support, I dont know why I did this but I am too scared to undo it at this point
+func notFound(resp http.ResponseWriter, req *http.Request, status int) {
+	resp.WriteHeader(status)
+	fmt.Fprint(resp, "custom 404")
 }
 
 //First page Stuff!
@@ -95,41 +99,38 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 
 func upload(resp http.ResponseWriter, req *http.Request) {
 
-	/*fmt.Println("method:", req.Method)
-	if req.Method == "GET" {
-		crutime := time.Now().Unix()
-		md5 := md5.New()
-		io.WriteString(md5, strconv.FormatInt(crutime, 10))
-		fmt.Printf("MD5:", md5)
-		token := fmt.Sprintf("%x", md5.Sum(nil))
-		t, _ := template.ParseFiles("upload.gtpl")
-		t.Execute(resp, token)
-	} else {
-		req.ParseMultipartForm(32 << 20)
-		file, handler, err := req.FormFile("img")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer file.Close()
-		fmt.Fprintf(resp, "%v", handler.Header)
-		f, err := os.OpenFile(imgStore+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer f.Close()
-		io.Copy(f, file)
+	/*	fmt.Println("method:", req.Method)
+		if req.Method == "GET" {
+			crutime := time.Now().Unix()
+			md5 := md5.New()
+			io.WriteString(md5, strconv.FormatInt(crutime, 10))
+			fmt.Printf("MD5:", md5)
+			token := fmt.Sprintf("%x", md5.Sum(nil))
+			t, _ := template.ParseFiles("upload.gtpl")
+			t.Execute(resp, token)
+		} else {
+			req.ParseMultipartForm(32 << 20)
+			file, handler, err := req.FormFile("img")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			defer file.Close()
+			fmt.Fprintf(resp, "%v", handler.Header)
+			f, err := os.OpenFile(imgStore+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			defer f.Close()
+			io.Copy(f, file)
 
-		
-	}
-	
-}*/
+				}*/
 
-
+}
 
 // Page for sending pics
-func (resp http.ResponseWriter, req *http.Request, img string)sendImg {
+func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	if len(img) != imgHash {
 		img = defaultImg //if no image existsa, use testing image
 	}
@@ -138,7 +139,7 @@ func (resp http.ResponseWriter, req *http.Request, img string)sendImg {
 	defer openfile.Close() //Close after function return
 	if err != nil {
 		//File not found, send 404
-		notFound(resp, req)
+		errorHandler(resp, req, http.StatusNotFound)
 	}
 
 	//File is found, create and send the correct headers
@@ -167,15 +168,15 @@ func (resp http.ResponseWriter, req *http.Request, img string)sendImg {
 	return
 }
 
-func (resp http.ResponseWriter, req *http.Request, status int)errorHandler {
+func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
 	resp.WriteHeader(status)
 	if status == http.StatusNotFound {
 		fmt.Fprint(resp, "custom 404")
-		notFound(resp, req)
+		notFound(resp, req, status)
 	}
 }
-
 func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+
 	fmt.Println("the req arrived")
 	if req.Body == nil {
 		return
