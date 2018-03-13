@@ -17,7 +17,7 @@ and more text here.
 field from request: {{ .Fn}}
 </p>
 
-<form enctype="multipart/form-data" action="/app/test/" method="POST">
+<form enctype="multipart/form-data" action="http://127.0.0.1:9001/app/test/" method="POST">
   First name: <input type="text" name="fn"><br>
   Last name: <input type="text" name="tn"><br>
 	IMG: <input type="file" name="img"><br>

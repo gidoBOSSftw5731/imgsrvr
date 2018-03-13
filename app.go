@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"database/sql"
 	"fmt"
 	"html/template"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -43,18 +45,24 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 		fmt.Printf("Failed to parse template: %v", err)
 		return
 	}
+
 	field := req.FormValue("fn")
 	fmt.Println(field)
 	tData := tData{
 		Fn: field,
 	}
+	//upload(resp, req)
+	fmt.Printf("Form data:", field, "\n tData:", tData)
+
 	if err = firstPageTemplate.Execute(resp, tData); err != nil {
 		fmt.Printf("template execute error: %v", err)
 		return
+
 	}
+
 }
 
-//testingPage!!!
+//testingPage!!! (the picture will go here)
 func testingPage(resp http.ResponseWriter, req *http.Request) {
 	/* TODO:
 	store file on disk:
@@ -62,70 +70,40 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	-create a map/index of pub name (hash) to path
 	provide path to file
 	*/
-	//Handling Uploading, will one day put into a func of its own, one day....
-	req.ParseMultipartForm(32 << 20)
-	file, handler, err := req.FormFile("img")
-	if err != nil {
-		fmt.Println(err)
-		return //checks for file
-	}
-	defer file.Close()
-	fmt.Fprintf(resp, "%v", handler.Header)
-	f, err := os.OpenFile("./test/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer f.Close()
-	io.Copy(f, file)
+	http.HandleFunc("/img", upload)
 	upload(resp, req)
-	// filename := fileHash
-	testPageTemplate := template.New("test page templated.")
-	testPageTemplate, err = testPageTemplate.Parse(testPage)
-	if err != nil {
-		fmt.Printf("Failed to parse template: %v", err) // this only happens if someone goofs the template file
-		return
-	}
-	field := req.FormValue("tn")
-	fmt.Println(field)
-	tData := tData{
-		Tn: field,
-	}
-	if err = testPageTemplate.Execute(resp, tData); err != nil {
-		fmt.Printf("template execute error: %v", err)
-		return
-	}
 }
-
 func upload(resp http.ResponseWriter, req *http.Request) {
 
-	/*	fmt.Println("method:", req.Method)
-		if req.Method == "GET" {
-			crutime := time.Now().Unix()
-			md5 := md5.New()
-			io.WriteString(md5, strconv.FormatInt(crutime, 10))
-			fmt.Printf("MD5:", md5)
-			token := fmt.Sprintf("%x", md5.Sum(nil))
-			t, _ := template.ParseFiles("upload.gtpl")
-			t.Execute(resp, token)
-		} else {
-			req.ParseMultipartForm(32 << 20)
-			file, handler, err := req.FormFile("img")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			defer file.Close()
-			fmt.Fprintf(resp, "%v", handler.Header)
-			f, err := os.OpenFile(imgStore+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			defer f.Close()
-			io.Copy(f, file)
+	fmt.Println("method:", req.Method)
+	if req.Method == "GET" {
+		crutime := time.Now().Unix()
+		fmt.Println("Beep Beep Beep... The time is:", crutime)
+		md5 := md5.New()
+		fmt.Printf("I just got the md5! Here it is:", md5, "/nEnd of md5")
+		io.WriteString(md5, strconv.FormatInt(crutime, 10))
+		//fmt.Printf("MD5:", md5)
+		token := fmt.Sprintf("%x", md5.Sum(nil))
+		t, _ := template.ParseFiles("upload.gtpl")
+		t.Execute(resp, token)
+	} else {
+		req.ParseMultipartForm(32 << 20)
+		file, handler, err := req.FormFile("img")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer file.Close()
+		fmt.Fprintf(resp, "%v", handler.Header)
+		f, err := os.OpenFile(imgStore+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer f.Close()
+		io.Copy(f, file)
 
-				}*/
+	}
 
 }
 
@@ -257,3 +235,41 @@ func main() {
 
 	fcgi.Serve(listener, srv) //end of request
 }
+
+//LEGACY CODE (Only here for historical purposes, please ignore)
+/*
+//Handling Uploading, will one day put into a func of its own, one day.... (this was in testingPage)
+	req.ParseMultipartForm(32 << 20)
+	file, handler, err := req.FormFile("img")
+	if err != nil {
+		fmt.Println(err)
+		return //checks for file
+	}
+	defer file.Close()
+	fmt.Fprintf(resp, "%v", handler.Header)
+	f, err := os.OpenFile("./test/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer f.Close()
+	io.Copy(f, file)
+
+	// filename := fileHash
+	testPageTemplate := template.New("test page templated.")
+	testPageTemplate, err = testPageTemplate.Parse(testPage)
+	if err != nil {
+		fmt.Printf("Failed to parse template: %v", err) // this only happens if someone goofs the template file
+		return
+	}
+	field := req.FormValue("tn")
+	fmt.Println(field)
+	tData := tData{
+		Tn: field,
+	}
+	if err = testPageTemplate.Execute(resp, tData); err != nil {
+		fmt.Printf("template execute error: %v", err)
+		return
+	}
+
+*/
