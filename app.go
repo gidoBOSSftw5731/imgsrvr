@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io"
@@ -34,7 +35,7 @@ type tData struct {
 //404 support, I dont know why I did this but I am too scared to undo it at this point
 func notFound(resp http.ResponseWriter, req *http.Request, status int) {
 	resp.WriteHeader(status)
-	fmt.Fprint(resp, "custom 404")
+	fmt.Fprint(resp, "custom ", status)
 }
 
 //First page Stuff!
@@ -52,7 +53,7 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 		Fn: field,
 	}
 	//upload(resp, req)
-	fmt.Printf("Form data:", field, "\n tData:", tData)
+	fmt.Printf("Form data: ", field, "\ntData: ", tData)
 
 	if err = firstPageTemplate.Execute(resp, tData); err != nil {
 		fmt.Printf("template execute error: %v", err)
@@ -62,16 +63,18 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 
 }
 
-//testingPage!!! (the picture will go here)
+//testingPage!!! Missleading name, I know, this page takes the info from last page to upload
 func testingPage(resp http.ResponseWriter, req *http.Request) {
 	/* TODO:
 	store file on disk:
+	-Accept the file 								DONE
 	-create name (from md5)
 	-create a map/index of pub name (hash) to path
 	provide path to file
 	*/
 	http.HandleFunc("/img", upload)
 	upload(resp, req)
+
 }
 func upload(resp http.ResponseWriter, req *http.Request) {
 
@@ -80,8 +83,10 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 		crutime := time.Now().Unix()
 		fmt.Println("Beep Beep Beep... The time is:", crutime)
 		md5 := md5.New()
-		fmt.Printf("I just got the md5! Here it is:", md5, "/nEnd of md5")
 		io.WriteString(md5, strconv.FormatInt(crutime, 10))
+		byteMd5 := []byte("md5")
+		encodedMd5 := base64.StdEncoding.EncodeToString(byteMd5)
+		fmt.Println("I just got the hashed md5! Here it is:", encodedMd5, "\nEnd of md5")
 		//fmt.Printf("MD5:", md5)
 		token := fmt.Sprintf("%x", md5.Sum(nil))
 		t, _ := template.ParseFiles("upload.gtpl")
@@ -93,6 +98,7 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 			fmt.Println(err)
 			return
 		}
+		//fmt.Printf("File:", file, "\nhandler: ", handler) //too spammy for normal use
 		defer file.Close()
 		fmt.Fprintf(resp, "%v", handler.Header)
 		f, err := os.OpenFile(imgStore+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
@@ -102,9 +108,7 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 		}
 		defer f.Close()
 		io.Copy(f, file)
-
 	}
-
 }
 
 // Page for sending pics
@@ -149,7 +153,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
 	resp.WriteHeader(status)
 	if status == http.StatusNotFound {
-		fmt.Fprint(resp, "custom 404")
+		//fmt.Fprint(resp, "custom 404")
 		notFound(resp, req, status)
 	}
 }
