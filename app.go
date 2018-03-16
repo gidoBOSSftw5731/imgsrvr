@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"database/sql"
-	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"io"
@@ -23,7 +23,7 @@ const (
 	urlPrefix  = "/app/"
 	defaultImg = "/home/gido5731/work/imgsrvr/testingpics/Graphic1-50.jpg"
 	imgHash    = 6
-	imgStore   = "/var/tmp/imgStorage"
+	imgStore   = "/var/tmp/imgStorage/"
 )
 
 type FastCGIServer struct{}
@@ -84,8 +84,9 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 		fmt.Println("Beep Beep Beep... The time is:", crutime)
 		md5 := md5.New()
 		io.WriteString(md5, strconv.FormatInt(crutime, 10))
+		encodedMd5 := make([]byte, hex.EncodedLen(imgHash))
 		byteMd5 := []byte("md5")
-		encodedMd5 := base64.StdEncoding.EncodeToString(byteMd5)
+		hex.Encode(byteMd5, encodedMd5)
 		fmt.Println("I just got the hashed md5! Here it is:", encodedMd5, "\nEnd of md5")
 		//fmt.Printf("MD5:", md5)
 		token := fmt.Sprintf("%x", md5.Sum(nil))
@@ -93,15 +94,32 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 		t.Execute(resp, token)
 	} else {
 		req.ParseMultipartForm(32 << 20)
+		crutime := time.Now().Unix()
+		fmt.Println("Beep Beep Beep... The time is:", crutime)
+
 		file, handler, err := req.FormFile("img")
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
+		md5 := md5.New()
+		io.WriteString(md5, strconv.FormatInt(crutime, 10))
+		byteMd5 := []byte("md5")
+		encodedMd5 := hex.EncodeToString(byteMd5)
+		fmt.Println("I just got the hashed md5! Here it is:", encodedMd5, "\nEnd of md5")
+		//fmt.Printf("MD5:", md5)
+		//token := fmt.Sprintf("%x", md5.Sum(nil))
+		//t, _ := template.ParseFiles("upload.gtpl")
+		//t.Execute(resp, token)
+		fmt.Println("file: ", file)
+		firstChar := string(encodedMd5[0])
+		secondChar := string(encodedMd5[1])
 		//fmt.Printf("File:", file, "\nhandler: ", handler) //too spammy for normal use
 		defer file.Close()
 		fmt.Fprintf(resp, "%v", handler.Header)
-		f, err := os.OpenFile(imgStore+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+		filepath := imgStore + firstChar + "/" + secondChar + "/"
+		f, err := os.OpenFile(filepath+encodedMd5, os.O_WRONLY|os.O_CREATE, 0666)
+		fmt.Println("filename?: ", filepath+encodedMd5)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -276,4 +294,8 @@ func main() {
 		return
 	}
 
+
+//FileSplit (From upload)
+	//fileSplit := strings.Split(imgStore+handler.Filename, "/")
+	//fmt.Println("filesplit: ", fileSplit[4])
 */
