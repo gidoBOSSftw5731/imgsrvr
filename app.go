@@ -68,8 +68,8 @@ func testingPage(resp http.ResponseWriter, req *http.Request) {
 	/* TODO:
 	store file on disk:
 	-Accept the file 								DONE
-	-create name (from md5)
-	-create a map/index of pub name (hash) to path
+	-create name (from md5)							DONE
+	-create a map/index of pub name (hash) to path	(Postponed)
 	provide path to file
 	*/
 	http.HandleFunc("/img", upload)
@@ -131,11 +131,17 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 
 // Page for sending pics
 func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
+	fmt.Println("Recieved a req to send the user a file")
 	if len(img) != imgHash {
-		img = defaultImg //if no image existsa, use testing image
+		//img = defaultImg //if no image exists, use testing image
+		//fmt.Println("Using Default Image")
+		errorHandler(resp, req, 404)
 	}
+	firstChar := string(img[0])
+	secondChar := string(img[1])
+	filepath := imgStore + firstChar + "/" + secondChar + "/"
 	//Check if file exists and open
-	openfile, err := os.Open(img)
+	openfile, err := os.Open(filepath + img)
 	defer openfile.Close() //Close after function return
 	if err != nil {
 		//File not found, send 404
@@ -203,14 +209,14 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		testingPage(resp, req)
 	case "i":
 		// Checks for hash/element/thing
-		if urlECount != 4 {
+		if urlECount != 4 || urlSplit[3] == "" {
 			errorHandler(resp, req, http.StatusNotFound)
 			return
 		}
 		fmt.Printf("urlECount of IMG: %d\n", urlECount)
 		fmt.Printf("Split for image: %v\n", urlSplit)
-		//sendImg(resp, req, urlSplit[3])
-		upload(resp, req)
+		sendImg(resp, req, urlSplit[3])
+		//upload(resp, req)
 	default:
 		appPage(resp, req)
 	}
