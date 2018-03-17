@@ -206,10 +206,14 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	// Now URL looks like "urlPrefix/foo"
 	switch urlSplit[2] {
 	case "test":
+		if urlECount != 4 || urlSplit[3] == "" {
+			errorHandler(resp, req, http.StatusNotFound)
+			return
+		}
 		testingPage(resp, req)
 	case "i":
 		// Checks for hash/element/thing
-		if urlECount != 4 || urlSplit[3] == "" {
+		if urlECount != 4 {
 			errorHandler(resp, req, http.StatusNotFound)
 			return
 		}
