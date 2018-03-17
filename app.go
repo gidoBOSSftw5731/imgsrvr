@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -117,15 +118,16 @@ func upload(resp http.ResponseWriter, req *http.Request) {
 		//fmt.Printf("File:", file, "\nhandler: ", handler) //too spammy for normal use
 		defer file.Close()
 		fmt.Fprintf(resp, "%v", handler.Header)
-		filepath := imgStore + firstChar + "/" + secondChar + "/"
+		filepath := path.Join(imgStore, firstChar, secondChar, encodedMd5)
 		f, err := os.OpenFile(filepath+encodedMd5, os.O_WRONLY|os.O_CREATE, 0666)
-		fmt.Println("filename?: ", filepath+encodedMd5)
+		fmt.Println("filename?: ", filepath)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 		defer f.Close()
 		io.Copy(f, file)
+		sendImg(resp, req, encodedMd5)
 	}
 }
 
@@ -139,9 +141,9 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	}
 	firstChar := string(img[0])
 	secondChar := string(img[1])
-	filepath := imgStore + firstChar + "/" + secondChar + "/"
+	filepath := path.Join(imgStore, firstChar, secondChar, img)
 	//Check if file exists and open
-	openfile, err := os.Open(filepath + img)
+	openfile, err := os.Open(filepath)
 	defer openfile.Close() //Close after function return
 	if err != nil {
 		//File not found, send 404
