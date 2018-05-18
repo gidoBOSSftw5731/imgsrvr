@@ -26,7 +26,7 @@ const (
 	defaultImg = "/home/gido5731/work/imgsrvr/testingpics/Graphic1-50.jpg"
 	imgHash    = 6
 	imgStore   = "/var/tmp/imgStorage/"
-	baseUrl    = "localhost"
+	baseURL    = "localhost"
 )
 
 type FastCGIServer struct{}
@@ -103,7 +103,7 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 		token := fmt.Sprintf("%x", md5.Sum(nil))
 		t, _ := template.ParseFiles("upload.gtpl")
 		t.Execute(resp, token)
-		fileURL := "http://" + baseUrl + urlPrefix + "i/" + encodedMd5
+		fileURL := "http://" + baseURL + urlPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, 301)
 	} else {
 		req.ParseForm()
@@ -152,7 +152,7 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 		fmt.Println("Saved file!")
 		//sendImg(resp, req, encodedMd5)
 		//return encodedMd5, err
-		fileURL := "http://" + baseUrl + urlPrefix + "i/" + fileName
+		fileURL := "http://" + baseURL + urlPrefix + "i/" + fileName
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 	}
 	//return encodedMd5, err
