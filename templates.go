@@ -11,10 +11,8 @@ var (
 
 <head><title>This is the first page</title></head>
 <body>
-There is text here. <br>
-
-and more text here.
-
+<b> EVERYTHING IS EXPALINED IN SOME DETAIL AT MY GITHUB: </b><br>
+https://github.com/gidoBOSSftw5731/imgsrvr/tree/master
 <p>
 field from request: {{ .Fn}}
 </p>
