@@ -20,8 +20,7 @@ field from request: {{ .Fn}}
 </p>
 
 <form enctype="multipart/form-data" action="/app/upload/" method="post">
-  First name: <input type="text" name="fn"><br>
-  Last name: <input type="text" name="tn"><br>
+  Key: <input type="password" name="fn"><br>
   <input type="hidden" name="token" value="{{.}}"/>
 	IMG: <input type="file" name="uploadfile"><br>
   <input type="submit" value="Go!">

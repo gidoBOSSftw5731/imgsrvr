@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -45,6 +47,7 @@ type FileHeader struct {
 func notFound(resp http.ResponseWriter, req *http.Request, status int) {
 	resp.WriteHeader(status)
 	fmt.Fprint(resp, "custom ", status)
+
 }
 
 //First page Stuff!
@@ -90,71 +93,109 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 	//encodedMd5 := string()
 	//req.ParseForm()
 	//fmt.Println("method:", req.Method)
-	if req.Method == "GET" {
-		fmt.Println("Yo, its GET for the upload, btw")
-		crutime := time.Now().Unix()
-		fmt.Println("Beep Beep Beep... The time is:", crutime)
-		md5 := md5.New()
-		io.WriteString(md5, strconv.FormatInt(crutime, 10))
-		bytemd5 := []byte("md5")
-		encodedMd5 := hex.EncodeToString(bytemd5)
-		fmt.Println("I just got the hashed md5! Here it is:", encodedMd5, "\nEnd of md5sum")
-		//fmt.Printf("MD5:", md5)
-		token := fmt.Sprintf("%x", md5.Sum(nil))
-		t, _ := template.ParseFiles("upload.gtpl")
-		t.Execute(resp, token)
-		fileURL := "http://" + baseURL + urlPrefix + "i/" + encodedMd5
-		http.Redirect(resp, req, fileURL, 301)
-	} else {
-		req.ParseForm()
-		//img := req.FormFile("img")
-		fmt.Println("Yo, its POST for the upload, btw")
-		req.ParseMultipartForm(32 << 20)
-		crutime := time.Now().Unix()
-		fmt.Println("Beep Beep Beep... The time is:", crutime)
-		file, handler, err := req.FormFile("uploadfile")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		os.Open(handler.Filename)
-		defer file.Close()
-		md5 := md5.New()
-		io.WriteString(md5, strconv.FormatInt(crutime, 10))
-		byteMd5 := []byte(handler.Filename)
-		encodedMd5 := hex.EncodeToString(byteMd5)[:imgHash]
-		fmt.Println("I just hashed md5! Here it is:", encodedMd5, "\nEnd of md5sum")
-		//fmt.Printf("MD5:", md5)ot the
-		//token := fmt.Sprintf("%x", md5.Sum(nil))
-		//t, _ := template.ParseFiles("upload.gtpl")
-		//t.Execute(resp, token)
-		firstChar := string(encodedMd5[0])
-		secondChar := string(encodedMd5[1])
-		//fmt.Printf("File:", file, "\nhandler: ", handler) //too spammy for normal use
-		defer file.Close()
-		//fmt.Fprintf(resp, "%v", handler.Header)
-		os.Open(handler.Filename)
-		fmt.Printf("FileName: %s \n", handler.Filename)
-		nameSplit := strings.Split(handler.Filename, ".")
-		fmt.Printf("File extension: %s\n", nameSplit[len(nameSplit)-1])
-		fileName := encodedMd5 + "." + nameSplit[len(nameSplit)-1]
-		filepath := path.Join(imgStore, firstChar, secondChar, fileName)
-		fmt.Println("file: ", file)
-
-		f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666)
-		fmt.Println("filename?: ", filepath)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer f.Close()
-		io.Copy(f, file)
-		fmt.Println("Saved file!")
-		//sendImg(resp, req, encodedMd5)
-		//return encodedMd5, err
-		fileURL := "http://" + baseURL + urlPrefix + "i/" + fileName
-		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
+	workingDir, err := os.Getwd()
+	keyFile := workingDir + "/keys"
+	content, err := ioutil.ReadFile(keyFile)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
+	keySplit := strings.Split(string(content), ",")
+	if string(content) == "" {
+		errorHandler(resp, req, 404)
+		return
+	}
+	if len(keySplit) == 0 {
+		log.Fatal("NO KEYS")
+		return
+	} else {
+
+		for i := 0; i <= len(keySplit)-1; i++ {
+			var keySuccess bool
+			if req.FormValue("fn") == keySplit[i] {
+				keySuccess := true
+				if keySuccess != true {
+					fmt.Println("Invalid/no key")
+					//fmt.Fprintln("NO/INVALID KEY")
+					return
+				}
+				fmt.Printf("Key success!\n")
+				if req.Method == "GET" {
+					fmt.Println("Yo, its GET for the upload, btw")
+					crutime := time.Now().Unix()
+					fmt.Println("Beep Beep Beep... The time is:", crutime)
+					md5 := md5.New()
+					io.WriteString(md5, strconv.FormatInt(crutime, 10))
+					bytemd5 := []byte("md5")
+					encodedMd5 := hex.EncodeToString(bytemd5)
+					fmt.Println("I just got the hashed md5! Here it is:", encodedMd5, "\nEnd of md5sum")
+					//fmt.Printf("MD5:", md5)
+					token := fmt.Sprintf("%x", md5.Sum(nil))
+					t, _ := template.ParseFiles("upload.gtpl")
+					t.Execute(resp, token)
+					fileURL := "http://" + baseURL + urlPrefix + "i/" + encodedMd5
+					http.Redirect(resp, req, fileURL, 301)
+				} else {
+					req.ParseForm()
+					//img := req.FormFile("img")
+					fmt.Println("Yo, its POST for the upload, btw")
+					req.ParseMultipartForm(32 << 20)
+					crutime := time.Now().Unix()
+					fmt.Println("Beep Beep Beep... The time is:", crutime)
+					file, handler, err := req.FormFile("uploadfile")
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+					os.Open(handler.Filename)
+					defer file.Close()
+					md5 := md5.New()
+					io.WriteString(md5, strconv.FormatInt(crutime, 10))
+					byteMd5 := []byte(handler.Filename)
+					encodedMd5 := hex.EncodeToString(byteMd5)[:imgHash]
+					fmt.Println("I just hashed md5! Here it is:", encodedMd5, "\nEnd of md5sum")
+					//fmt.Printf("MD5:", md5)ot the
+					//token := fmt.Sprintf("%x", md5.Sum(nil))
+					//t, _ := template.ParseFiles("upload.gtpl")
+					//t.Execute(resp, token)
+					firstChar := string(encodedMd5[0])
+					secondChar := string(encodedMd5[1])
+					//fmt.Printf("File:", file, "\nhandler: ", handler) //too spammy for normal use
+					defer file.Close()
+					//fmt.Fprintf(resp, "%v", handler.Header)
+					os.Open(handler.Filename)
+					fmt.Printf("FileName: %s \n", handler.Filename)
+					nameSplit := strings.Split(handler.Filename, ".")
+					fmt.Printf("File extension: %s\n", nameSplit[len(nameSplit)-1])
+					fileName := encodedMd5 + "." + nameSplit[len(nameSplit)-1]
+					filepath := path.Join(imgStore, firstChar, secondChar, fileName)
+					fmt.Println("file: ", file)
+
+					f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666)
+					fmt.Println("filename?: ", filepath)
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+					defer f.Close()
+					io.Copy(f, file)
+					fmt.Println("Saved file!")
+					//sendImg(resp, req, encodedMd5)
+					//return encodedMd5, err
+					fileURL := "http://" + baseURL + urlPrefix + "i/" + fileName
+					http.Redirect(resp, req, fileURL, http.StatusSeeOther)
+				}
+			}
+			if keySuccess != true {
+				fmt.Println("Invalid/no key")
+				//fmt.Fprintln("NO/INVALID KEY")
+				return
+			}
+
+		}
+
+	}
+
 	//return encodedMd5, err
 }
 
@@ -211,11 +252,10 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 
 func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
 	resp.WriteHeader(status)
-	if status == http.StatusNotFound {
-		//fmt.Fprint(resp, "custom 404")
-		notFound(resp, req, status)
-	}
+	fmt.Println("artifical http error: ", status)
+	fmt.Fprint(resp, "custom ", status)
 }
+
 func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	fmt.Println("the req arrived")
