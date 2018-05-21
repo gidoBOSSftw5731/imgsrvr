@@ -23,14 +23,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-const (
-	urlPrefix  = "/app/"
-	defaultImg = "/home/gido5731/work/imgsrvr/testingpics/Graphic1-50.jpg"
-	imgHash    = 6
-	imgStore   = "/var/tmp/imgStorage/"
-	baseURL    = "localhost"
-)
-
 type FastCGIServer struct{}
 type tData struct {
 	Fn string
