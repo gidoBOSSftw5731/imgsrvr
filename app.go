@@ -127,6 +127,7 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 					t.Execute(resp, token)
 					fileURL := "http://" + baseURL + urlPrefix + "i/" + encodedMd5
 					http.Redirect(resp, req, fileURL, 301)
+					return
 				} else {
 					req.ParseForm()
 					//img := req.FormFile("img")
@@ -176,6 +177,7 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 					//return encodedMd5, err
 					fileURL := "http://" + baseURL + urlPrefix + "i/" + fileName
 					http.Redirect(resp, req, fileURL, http.StatusSeeOther)
+					return
 				}
 			}
 			if keySuccess != true {
