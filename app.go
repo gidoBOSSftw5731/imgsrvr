@@ -58,7 +58,6 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 	}
 	//upload(resp, req)
 	fmt.Println("Form data: ", field, "\ntData: ", tData)
-
 	if err = firstPageTemplate.Execute(resp, tData); err != nil {
 		fmt.Printf("template execute error: %v", err)
 		return
@@ -308,6 +307,12 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		upload(resp, req)
 	default:
 		appPage(resp, req)
+	}
+	switch urlSplit[1] {
+	case "":
+		http.Redirect(resp, req, baseURL+urlPrefix, http.StatusSeeOther)
+	default:
+		errorHandler(resp, req, http.StatusNotFound)
 	}
 }
 
