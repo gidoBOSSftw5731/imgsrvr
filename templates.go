@@ -9,7 +9,9 @@ var (
 	firstPage = `<html>
 
 
-<head><title>This is the first page</title></head>
+<head>
+<meta name="google-site-verification" content="2QLKtDFPPQwFab4Tx2Gf0TJ1SVMI1lSA4VfKsA90SaY" /> //ssshhh...
+<title>This is the first page</title></head>
 <body>
 <b> EVERYTHING IS EXPALINED IN SOME DETAIL AT MY GITHUB: </b><br>
 https://github.com/gidoBOSSftw5731/imgsrvr/tree/master
