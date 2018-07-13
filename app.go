@@ -174,7 +174,7 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 					fmt.Println("Saved file!")
 					//sendImg(resp, req, encodedMd5)
 					//return encodedMd5, err
-					fileURL := "http://" + baseURL + urlPrefix + "i/" + fileName
+					fileURL := baseURL + urlPrefix + "i/" + fileName
 					http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 					return
 				}
@@ -261,7 +261,8 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	urlECount := len(urlSplit)
 	fmt.Printf("urlECount: %d\n", urlECount)
 	// Checking amt of elements in url (else sends 404)
-	if urlECount < 3 {
+
+	if urlECount < 2 {
 		errorHandler(resp, req, http.StatusNotFound)
 		return
 	}
@@ -270,11 +271,26 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		errorHandler(resp, req, http.StatusNotFound)
 		return
 	}
+	// Defining variables as if there was NO prefix (this will never happen)
+	// INSERT FUCTION TO DO VARS
 
-	// Now URL looks like "urlPrefix/foo"
-	switch urlSplit[2] {
+	/* URL Template
+	0: usually null, or maybe its the url...?
+	1: The prefix, if there is one, if it isnt then this list isnt applicable
+	2: The part to ask for a part of the site
+	3: data for the site (like file name)
+	*/
+	// Add your variables involving the URL here
+	numberOfPrefixSlashes := strings.Count(urlPrefix, "/") - 1
+	switchLen := 1 + numberOfPrefixSlashes
+	test1 := 2 + numberOfPrefixSlashes
+	test2 := 1 + numberOfPrefixSlashes
+	i1 := 2 + numberOfPrefixSlashes
+	fmt.Println("The 'info' part of the url is ", switchLen, "\nThe URL is ", req.URL.Path)
+
+	switch urlSplit[switchLen] {
 	case "test":
-		if urlECount != 4 || urlSplit[3] == "" {
+		if urlECount != test1 || urlSplit[test2] == "" {
 			errorHandler(resp, req, http.StatusNotFound)
 			return
 		}
@@ -299,7 +315,7 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		sendImg(resp, req, urlSplit[3])
 		//upload(resp, req)
 	case "upload":
-		if urlECount != 4 {
+		if urlECount != i1 {
 			errorHandler(resp, req, http.StatusNotFound)
 			return
 		}
@@ -308,12 +324,7 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	default:
 		appPage(resp, req)
 	}
-	switch urlSplit[1] {
-	case "":
-		http.Redirect(resp, req, baseURL+urlPrefix, http.StatusSeeOther)
-	default:
-		errorHandler(resp, req, http.StatusNotFound)
-	}
+
 }
 
 // createImgDir creates all image storage directories
@@ -331,8 +342,6 @@ func main() {
 
 	go createImgDir(imgStore)
 
-	//http.HandleFunc("/app/upload/", upload)
-	//http.HandleFunc("/app/", firstPage)
 	fmt.Println("Starting the program.")
 	listener, _ := net.Listen("tcp", "127.0.0.1:9001")
 	fmt.Println("Started the listener.")
