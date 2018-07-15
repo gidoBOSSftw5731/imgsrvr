@@ -256,10 +256,10 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if req.Body == nil {
 		return
 	}
-	crutime := time.Now().Unix()
 
 	urlSplit := strings.Split(req.URL.Path, "/")
 	urlECount := len(urlSplit)
+	fmt.Println("The url is:", req.URL.Path)
 	fmt.Printf("urlECount: %d\n", urlECount)
 	// Checking amt of elements in url (else sends 404)
 
@@ -282,32 +282,28 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	3: data for the site (like file name)
 	*/
 	// Add your variables involving the URL here
-	numberOfPrefixSlashes := strings.Count(urlPrefix, "/")
+	numberOfPrefixSlashes := strings.Count(urlPrefix, "/") - 1
 	switchLen := 1 + numberOfPrefixSlashes
-	if baseURL == "http://localhost" {
-		switchLen--
-	}
-	test1 := 2 + numberOfPrefixSlashes
-	test2 := 1 + numberOfPrefixSlashes
+	//test1 := 2 + numberOfPrefixSlashes
+	//test2 := 1 + numberOfPrefixSlashes
 	i1 := 2 + numberOfPrefixSlashes
-	fmt.Println("The 'info' part of the url is ", switchLen, "\nThe URL is ", req.URL.Path, "\nAmount of Slashes: ", numberOfPrefixSlashes)
 
 	switch urlSplit[switchLen] {
-	case "test":
-		if urlECount != test1 || urlSplit[test2] == "" {
-			errorHandler(resp, req, http.StatusNotFound)
-			return
-		}
-		req.ParseMultipartForm(32 << 20)
-		md5 := md5.New()
-		fmt.Println("Im in the test case!")
-		io.WriteString(md5, strconv.FormatInt(crutime, 10))
-		bytemd5 := []byte("md5")
-		encodedMd5 := hex.EncodeToString(bytemd5)
-		fmt.Println("I just hashed md5! Here it is:", encodedMd5, "\nEnd of md5sum")
-		sendImg(resp, req, encodedMd5)
-		fmt.Printf("URL is: %v\n", req.URL.Path)
-		testingPage(resp, req, encodedMd5)
+	/*case "test":
+	if urlECount != test1 || urlSplit[test2] == "" {
+		errorHandler(resp, req, http.StatusNotFound)
+		return
+	}
+	req.ParseMultipartForm(32 << 20)
+	md5 := md5.New()
+	fmt.Println("Im in the test case!")
+	io.WriteString(md5, strconv.FormatInt(crutime, 10))
+	bytemd5 := []byte("md5")
+	encodedMd5 := hex.EncodeToString(bytemd5)
+	fmt.Println("I just hashed md5! Here it is:", encodedMd5, "\nEnd of md5sum")
+	sendImg(resp, req, encodedMd5)
+	fmt.Printf("URL is: %v\n", req.URL.Path)
+	testingPage(resp, req, encodedMd5)*/
 	case "i":
 		// Checks for hash/element/thing
 		if urlSplit[i1] == "" {
