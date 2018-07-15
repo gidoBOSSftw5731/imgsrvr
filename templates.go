@@ -9,7 +9,7 @@ import "fmt"
 <!-- and -->: Comments... WHY
 */
 var (
-	firstPage = fmt.Sprintln(`<html>
+	firstPage = fmt.Sprintf(`<html>
 
 
 <head>
@@ -22,7 +22,7 @@ https://github.com/gidoBOSSftw5731/imgsrvr/tree/master
 field from request: {{ .Fn}}
 </p>
 
-<form enctype="multipart/form-data" action="`, urlPrefix, `upload/" method="post">
+<form enctype="multipart/form-data" action="%supload/" method="post">
   Key: <input type="password" name="fn"><br>
   <input type="hidden" name="token" value="{{.}}"/>
 	IMG: <input type="file" name="uploadfile"><br>
@@ -40,7 +40,7 @@ field from request: {{ .Fn}}
 </script>
 
 </body>
-</html>`)
+</html>`, urlPrefix)
 
 	/*testPage = `<html>
 	  <head><title> This is the second test page!!! </title> </head>
