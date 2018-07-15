@@ -112,7 +112,7 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 				}
 				fmt.Printf("Key success!\n")
 				if req.Method == "GET" {
-					fmt.Println("Yo, its GET for the upload, btw")
+					/*fmt.Println("Yo, its GET for the upload, btw")
 					crutime := time.Now().Unix()
 					fmt.Println("Beep Beep Beep... The time is:", crutime)
 					md5 := md5.New()
@@ -124,8 +124,10 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 					token := fmt.Sprintf("%x", md5.Sum(nil))
 					t, _ := template.ParseFiles("upload.gtpl")
 					t.Execute(resp, token)
-					fileURL := "http://" + baseURL + urlPrefix + "i/" + encodedMd5
+					fileURL := baseURL + urlPrefix + "i/" + encodedMd5
 					http.Redirect(resp, req, fileURL, 301)
+					return*/
+					fmt.Fprintln(resp, "GET IS NOT SUPPORTED")
 					return
 				} else {
 					req.ParseForm()
@@ -134,16 +136,15 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 					req.ParseMultipartForm(32 << 20)
 					crutime := time.Now().Unix()
 					fmt.Println("Beep Beep Beep... The time is:", crutime)
-					file, handler, err := req.FormFile("uploadfile")
+					file, handler, err := req.FormFile("uploadfile") // Saving file to a cache defined by go
 					if err != nil {
 						fmt.Println(err)
 						return
 					}
-					os.Open(handler.Filename)
-					defer file.Close()
-					md5 := md5.New()
-					io.WriteString(md5, strconv.FormatInt(crutime, 10))
-					byteMd5 := []byte(handler.Filename)
+					os.Open(handler.Filename) //Opening to be used
+					defer file.Close()        //Disallowing closing until end of func
+					md5 := md5.New()          //Make a MD5 variable, to be changed later... maybe..
+					byteMd5 := md5.Sum(nil)[:16]
 					encodedMd5 := hex.EncodeToString(byteMd5)[:imgHash]
 					fmt.Println("I just hashed md5! Here it is:", encodedMd5, "\nEnd of md5sum")
 					//fmt.Printf("MD5:", md5)ot the
@@ -281,12 +282,12 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	3: data for the site (like file name)
 	*/
 	// Add your variables involving the URL here
-	numberOfPrefixSlashes := strings.Count(urlPrefix, "/") - 1
+	numberOfPrefixSlashes := strings.Count(urlPrefix, "/")
 	switchLen := 1 + numberOfPrefixSlashes
 	test1 := 2 + numberOfPrefixSlashes
 	test2 := 1 + numberOfPrefixSlashes
 	i1 := 2 + numberOfPrefixSlashes
-	fmt.Println("The 'info' part of the url is ", switchLen, "\nThe URL is ", req.URL.Path)
+	fmt.Println("The 'info' part of the url is ", switchLen, "\nThe URL is ", req.URL.Path, "\nAmount of Slashes: ", numberOfPrefixSlashes)
 
 	switch urlSplit[switchLen] {
 	case "test":
@@ -306,19 +307,15 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		testingPage(resp, req, encodedMd5)
 	case "i":
 		// Checks for hash/element/thing
-		if urlECount != 4 {
+		if urlSplit[i1] == "" {
 			errorHandler(resp, req, http.StatusNotFound)
 			return
 		}
 		fmt.Printf("urlECount of IMG: %d\n", urlECount)
 		fmt.Printf("Split for image: %v\n", urlSplit)
-		sendImg(resp, req, urlSplit[3])
+		sendImg(resp, req, urlSplit[i1])
 		//upload(resp, req)
 	case "upload":
-		if urlECount != i1 {
-			errorHandler(resp, req, http.StatusNotFound)
-			return
-		}
 		fmt.Println("Upload selected")
 		upload(resp, req)
 	default:
@@ -347,10 +344,16 @@ func main() {
 	fmt.Println("Started the listener.")
 	srv := new(FastCGIServer)
 	fmt.Println("Starting the fcgi.")
+	// I reccomend blocking 3306 in your firewall unless you use the port elsewhere
+	db, err := sql.Open("mysql", "root:D3skZucc@tcp(127.0.0.1:3306)/ImgSrvr")
 
-	conn, err := sql.Open("mysql", "/test")
+	if err != nil {
+		fmt.Println("Oh noez, could not connect to database")
+		return
+	}
+
 	fmt.Println("Oi, mysql did thing")
-	defer conn.Close()
+	defer db.Close()
 
 	if err != nil {
 		fmt.Println("Oh noez, could not connect to database")

