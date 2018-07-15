@@ -283,10 +283,10 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	*/
 	// Add your variables involving the URL here
 	numberOfPrefixSlashes := strings.Count(urlPrefix, "/")
-	if baseURL == "http://localhost" {
-		numberOfPrefixSlashes--
-	}
 	switchLen := 1 + numberOfPrefixSlashes
+	if baseURL == "http://localhost" {
+		switchLen--
+	}
 	test1 := 2 + numberOfPrefixSlashes
 	test2 := 1 + numberOfPrefixSlashes
 	i1 := 2 + numberOfPrefixSlashes
