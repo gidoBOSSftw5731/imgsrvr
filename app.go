@@ -142,8 +142,6 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 		} // end of SQL opening
 		req.ParseMultipartForm(32 << 20)
 		req.ParseForm()
-		ip := req.RemoteAddr
-		fmt.Println("This file is being uploaded by:", ip)
 		//img := req.FormFile("img")
 		fmt.Println("Yo, its POST for the upload, btw")
 		crutime := time.Now().Unix()
@@ -269,6 +267,8 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if req.Body == nil {
 		return
 	}
+	ip := req.RemoteAddr
+	fmt.Println("This request is being requested by:", ip)
 
 	urlSplit := strings.Split(req.URL.Path, "/")
 	urlECount := len(urlSplit)
