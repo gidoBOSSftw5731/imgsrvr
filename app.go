@@ -67,54 +67,41 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 
 }
 
-//testingPage!!! Missleading name, I know, this page takes the info from last page to upload
-func testingPage(resp http.ResponseWriter, req *http.Request, encodedMd5 string) {
-	/* TODO:
-	store file on disk:
-	-Accept the file 								DONE
-	-create name (from md5)						DONE
-	-create a map/index of pub name (hash) to path	(Postponed)
-	provide path to file							DONE
-	*/
-	req.ParseForm()
+/* TODO:
+store file on disk:
+-Accept the file 								DONE
+-create name (from md5)							DONE
+-create a database of pub name (hash) to path	(Postponed)
+provide path to file							DONE
+*/
 
-	upload(resp, req)
-}
-
-func checkKey(inputKey string, keySplit []string) bool {
-	if len(keySplit) == 0 {
-		log.Fatal("NO KEYS")
-	}
-	var keySuccess bool
-	sort.Strings(keySplit)
-	n := sort.SearchStrings(keySplit, inputKey)
-	if n < len(keySplit) && keySplit[n] == inputKey {
-		keySuccess = true
-	}
-	return keySuccess
-}
-
-func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
-	//encodedMd5 := string()
-	//req.ParseForm()
-	//fmt.Println("method:", req.Method)
+func checkKey(resp http.ResponseWriter, req *http.Request) bool {
 	inputKey := req.FormValue("fn")
 	workingDir, err := os.Getwd()
 	keyFile := workingDir + "/keys"
 	content, err := ioutil.ReadFile(keyFile)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return false
 	}
 	keySplit := strings.Split(string(content), ",")
 	if string(content) == "" {
 		errorHandler(resp, req, 404)
-		return
+		return false
 	}
+	if len(keySplit) == 0 {
+		log.Fatal("NO KEYS")
+	}
+	sort.Strings(keySplit)
+	n := sort.SearchStrings(keySplit, inputKey)
+	if n < len(keySplit) && keySplit[n] == inputKey {
+		return true
+	}
+	return false // last call if all else fails
+}
 
-	keySuccess := checkKey(inputKey, keySplit)
-
-	if keySuccess == true {
+func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
+	if checkKey(resp, req) == true {
 		fmt.Printf("Key success!\n")
 
 	} else {
@@ -138,7 +125,8 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 		fileURL := baseURL + urlPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, 301)
 		return*/
-		fmt.Fprintln(resp, "GET IS NOT SUPPORTED")
+		fmt.Fprintln(resp, "GET IS NOT SUPPORTED") /* Im too lazy to add GET support
+		and it will never occur, its just a dying branch of code*/
 		return
 	} else {
 		db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlPasswd))
@@ -161,47 +149,55 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 		crutime := time.Now().Unix()
 		fmt.Println("Beep Beep Beep... The time is:", crutime)
 		file, handler, err := req.FormFile("uploadfile") // Saving file to memory
+		defer file.Close()
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		filename := handler.Filename
-		os.Open(filename)  //Opening to be used
-		defer file.Close() //Disallowing closing until end of func
-		//byteFile := []byte(handler.Header)
+		fmt.Println("file: ", file) //Although this means nothing itself, its nice to have in case its a 0 byte file
+
 		md5 := md5.New() //Make a MD5 variable, to be changed later... maybe..
-		io.Copy(md5, file)
-		//byteMd5 := []byte(md5[:])
+		written, err := io.Copy(md5, file)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		if written == 0 {
+			fmt.Println("No file written, error!: ", written)
+			return
+		}
+		_, err = file.Seek(0, 0)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		encodedMd5 := hex.EncodeToString(md5.Sum(nil))[:imgHash]
-		fmt.Println("I just hashed md5! Here it is:", encodedMd5, "\nEnd of md5sum")
-		//fmt.Printf("MD5:", md5)ot the
-		//token := fmt.Sprintf("%x", md5.Sum(nil))
-		//t, _ := template.ParseFiles("upload.gtpl")
-		//t.Execute(resp, token)
+		fmt.Println("I just hashed md5! Here it is:", encodedMd5)
 		firstChar := string(encodedMd5[0])
 		secondChar := string(encodedMd5[1])
-		//fmt.Printf("File:", file, "\nhandler: ", handler) //too spammy for normal use
-		defer file.Close()
-		//fmt.Fprintf(resp, "%v", handler.Header)
-		os.Open(filename)
-		fmt.Printf("FileName: %s \n", filename)
-		nameSplit := strings.Split(filename, ".")
+		fmt.Println("FileName: \n", handler.Filename)
+		nameSplit := strings.Split(handler.Filename, ".")
 		fmt.Printf("File extension: %s\n", nameSplit[len(nameSplit)-1])
 		fileName := encodedMd5 + "." + nameSplit[len(nameSplit)-1]
 		filepath := path.Join(imgStore, firstChar, secondChar, fileName)
-		fmt.Println("file: ", file)
 
-		f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666)
+		f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666) // WRONLY means Write only
 		fmt.Println("filename?: ", filepath)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 		defer f.Close()
-		io.Copy(f, file)
+		written, err = io.Copy(f, file)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		if written == 0 {
+			fmt.Println("No file written, error!: ", written)
+			return
+		}
 		fmt.Println("Saved file!")
-		//sendImg(resp, req, encodedMd5)
-		//return encodedMd5, err
 		fileURL := baseURL + urlPrefix + "i/" + fileName
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 		return
