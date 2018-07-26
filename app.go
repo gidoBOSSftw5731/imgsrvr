@@ -36,6 +36,13 @@ type FileHeader struct {
 	// contains filtered or unexported fields
 }
 
+type files struct {
+	Hash        string
+	UploaderKey string
+	Filename    string
+	UploaderIP  string
+}
+
 //404 support, I dont know why I did this but I am too scared to undo it at this point
 func notFound(resp http.ResponseWriter, req *http.Request, status int) {
 	resp.WriteHeader(status)
@@ -75,8 +82,7 @@ store file on disk:
 provide path to file							DONE
 */
 
-func checkKey(resp http.ResponseWriter, req *http.Request) bool {
-	inputKey := req.FormValue("fn")
+func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool {
 	workingDir, err := os.Getwd()
 	keyFile := workingDir + "/keys"
 	content, err := ioutil.ReadFile(keyFile)
@@ -101,7 +107,8 @@ func checkKey(resp http.ResponseWriter, req *http.Request) bool {
 }
 
 func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
-	if checkKey(resp, req) == true {
+	inputKey := req.FormValue("fn")
+	if checkKey(resp, req, inputKey) == true {
 		fmt.Printf("Key success!\n")
 
 	} else {
@@ -174,11 +181,27 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 		firstChar := string(encodedMd5[0])
 		secondChar := string(encodedMd5[1])
 		fmt.Println("FileName: \n", handler.Filename)
-		nameSplit := strings.Split(handler.Filename, ".")
-		fmt.Printf("File extension: %s\n", nameSplit[len(nameSplit)-1])
-		fileName := encodedMd5 + "." + nameSplit[len(nameSplit)-1]
-		filepath := path.Join(imgStore, firstChar, secondChar, fileName)
-
+		sqlStr := "SELECT filename FROM files WHERE hash ='" + encodedMd5 + "'"
+		var sqlFilename string
+		err = db.QueryRow(sqlStr).Scan(&sqlFilename)
+		switch {
+		case err == sql.ErrNoRows:
+			sqlDivider := "', '"
+			sqlStr = "INSERT INTO files VALUES('" + encodedMd5 + sqlDivider + inputKey + sqlDivider + handler.Filename + sqlDivider + req.RemoteAddr + "')"
+			fmt.Println("SQL command: ", sqlStr)
+			insert, err := db.Query(sqlStr)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			defer insert.Close()
+			fmt.Println("Added fiel info to table")
+		case err != nil:
+			fmt.Println(err)
+			return
+		default:
+		}
+		filepath := path.Join(imgStore, firstChar, secondChar, sqlFilename)
 		f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666) // WRONLY means Write only
 		fmt.Println("filename?: ", filepath)
 		if err != nil {
@@ -196,7 +219,7 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 			return
 		}
 		fmt.Println("Saved file!")
-		fileURL := baseURL + urlPrefix + "i/" + fileName
+		fileURL := baseURL + urlPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 		return
 	}
@@ -206,10 +229,19 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 
 // Page for sending pics
 func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
+	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlPasswd))
+	if err != nil {
+		fmt.Println("Oh noez, could not connect to database")
+		return
+	}
+	fmt.Println("Oi, mysql did thing")
+	defer db.Close()
+	if err != nil {
+		fmt.Println("Oh noez, could not connect to database")
+		return
+	} // end of SQL opening
 	fmt.Println("Recieved a req to send the user a file")
-	nameSplit := strings.Split(img, ".")
-	imgTitle := nameSplit[0]
-	if len(imgTitle) != imgHash {
+	if len(img) != imgHash {
 		//img = defaultImg //if no image exists, use testing image
 		//fmt.Println("Using Default Image")
 		errorHandler(resp, req, 404)
@@ -218,17 +250,29 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	}
 	firstChar := string(img[0])
 	secondChar := string(img[1])
-	filepath := path.Join(imgStore, firstChar, secondChar, img)
-	//Check if file exists and open
-	openfile, err := os.Open(filepath)
-	defer openfile.Close() //Close after function return
+
 	if err != nil {
 		//File not found, send 404
 		errorHandler(resp, req, http.StatusNotFound)
 		fmt.Printf("ERROR: %s", err)
 		return
 	}
-
+	var filename string
+	sqlStr := "SELECT filename FROM files WHERE hash ='" + img + "'"
+	err = db.QueryRow(sqlStr).Scan(&filename)
+	switch {
+	case err == sql.ErrNoRows:
+		fmt.Println("File not in db..")
+	case err != nil:
+		fmt.Println(err)
+		return
+	default:
+		fmt.Println("Filename from sql is:", filename)
+	}
+	filepath := path.Join(imgStore, firstChar, secondChar, filename)
+	//Check if file exists and open
+	openfile, err := os.Open(filepath)
+	defer openfile.Close() //Close after function return
 	//File is found, create and send the correct headers
 
 	//Get the Content-Type of the file
