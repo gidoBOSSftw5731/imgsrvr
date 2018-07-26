@@ -196,6 +196,7 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 			}
 			defer insert.Close()
 			fmt.Println("Added fiel info to table")
+			sqlFilename = handler.Filename
 		case err != nil:
 			fmt.Println(err)
 			return
