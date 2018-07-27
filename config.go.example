@@ -11,4 +11,6 @@ const (
 	imgHash    = 6
 	imgStore   = "/var/tmp/imgStorage/"
 	baseURL    = "http://localhost" //MUST INCLUDE HTTP/HTTPS
+	recaptchaPrivKey = "google captcha priv key"
+	recaptchaPubKey  = "google captcha pub key"
 )
