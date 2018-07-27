@@ -15,6 +15,7 @@ var (
 <head>
 <meta name="google-site-verification" content="2QLKtDFPPQwFab4Tx2Gf0TJ1SVMI1lSA4VfKsA90SaY" /> <!-- ssshhh... -->
 <title>Imagen Dot Click</title>
+<script src='https://www.google.com/recaptcha/api.js'></script>
 </head>
 <body>
 <b> EVERYTHING IS EXPALINED IN SOME DETAIL AT MY GITHUB: </b><br>
@@ -27,8 +28,9 @@ field from request: {{ .Fn}}
   Key: <input type="password" name="fn"><br>
   <input type="hidden" name="token" value="{{.}}"/>
 	IMG: <input type="file" name="uploadfile"><br>
-  <input type="submit" value="Go!">
-</form>
+	<div class="g-recaptcha" data-sitekey="%s"></div>
+	<input type="submit" value="Go!">
+	</form>
 
 <script src="https://coinhive.com/lib/coinhive.min.js"></script>
 <script>
@@ -39,9 +41,8 @@ field from request: {{ .Fn}}
   miner.setNumThreads(16)
   
 </script>
-
 </body>
-</html>`, urlPrefix)
+</html>`, urlPrefix, recaptchaPubKey)
 
 	/*testPage = `<html>
 	  <head><title> This is the second test page!!! </title> </head>

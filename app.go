@@ -22,6 +22,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/haisum/recaptcha"
 )
 
 type FastCGIServer struct{}
@@ -78,7 +79,7 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 store file on disk:
 -Accept the file 								DONE
 -create name (from md5)							DONE
--create a database of pub name (hash) to path	(Postponed)
+-create a database of pub name (hash) to path	DONE
 provide path to file							DONE
 */
 
@@ -108,6 +109,17 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool
 
 func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 	inputKey := req.FormValue("fn")
+	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
+	re := recaptcha.R{
+		Secret: recaptchaPrivKey,
+	}
+	isValid := re.Verify(*req)
+	if !isValid {
+		fmt.Fprintf(resp, "Invalid! These errors ocurred: %v", re.LastError())
+		fmt.Printf("Invalid! These errors ocurred: %v", re.LastError())
+		return
+	}
+
 	if checkKey(resp, req, inputKey) == true {
 		fmt.Printf("Key success!\n")
 
