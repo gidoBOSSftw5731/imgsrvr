@@ -21,7 +21,7 @@ var (
 <b> EVERYTHING IS EXPALINED IN SOME DETAIL AT MY GITHUB: </b><br>
 https://github.com/gidoBOSSftw5731/imgsrvr/tree/master
 <p>
-field from request: {{ .Fn}}
+Needs JS for captchas {{ .Fn}}
 </p>
 
 <form enctype="multipart/form-data" action="%supload/" method="post">

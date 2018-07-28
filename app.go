@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -20,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gidoBOSSftw5731/log"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/haisum/recaptcha"
@@ -44,31 +45,24 @@ type files struct {
 	UploaderIP  string
 }
 
-//404 support, I dont know why I did this but I am too scared to undo it at this point
-func notFound(resp http.ResponseWriter, req *http.Request, status int) {
-	resp.WriteHeader(status)
-	fmt.Fprint(resp, "custom ", status)
-
-}
-
 //First page Stuff!
 func appPage(resp http.ResponseWriter, req *http.Request) {
 	firstPageTemplate := template.New("first page templated.")
 	firstPageTemplate, err := firstPageTemplate.Parse(firstPage)
 	if err != nil {
-		fmt.Printf("Failed to parse template: %v", err)
+		log.Errorf("Failed to parse template: %v", err)
 		return
 	}
 	req.ParseForm()
 	field := req.FormValue("fn")
-	fmt.Println(field)
+	//fmt.Println(field)
 	tData := tData{
 		Fn: field,
 	}
 	//upload(resp, req)
-	fmt.Println("Form data: ", field, "\ntData: ", tData)
+	log.Traceln("Form data: ", field, "\ntData: ", tData)
 	if err = firstPageTemplate.Execute(resp, tData); err != nil {
-		fmt.Printf("template execute error: %v", err)
+		log.Errorf("template execute error: %v", err)
 		return
 
 	}
@@ -80,7 +74,12 @@ store file on disk:
 -Accept the file 								DONE
 -create name (from md5)							DONE
 -create a database of pub name (hash) to path	DONE
-provide path to file							DONE
+-provide path to file							DONE
+-ReCaptcha										DONE
+-Fonts
+-css..?
+-proper logging
+-cookies
 */
 
 func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool {
@@ -88,7 +87,7 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool
 	keyFile := workingDir + "/keys"
 	content, err := ioutil.ReadFile(keyFile)
 	if err != nil {
-		fmt.Println(err)
+		log.Errorln(err)
 		return false
 	}
 	keySplit := strings.Split(string(content), ",")
@@ -121,11 +120,11 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 	}
 
 	if checkKey(resp, req, inputKey) == true {
-		fmt.Printf("Key success!\n")
+		log.Debugln("Key success!\n")
 
 	} else {
-		fmt.Println("Invalid/no key")
-		//fmt.Fprintln("NO/INVALID KEY")
+		log.Errorln("Invalid/no key")
+		fmt.Fprintln(resp, "Invalid/No key!!!")
 		return
 	}
 	if req.Method == "GET" {
@@ -150,85 +149,82 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 	} else {
 		db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlPasswd))
 		if err != nil {
-			fmt.Println("Oh noez, could not connect to database")
+			log.Error("Oh noez, could not connect to database")
 			return
 		}
-		fmt.Println("Oi, mysql did thing")
+		log.Debug("Oi, mysql did thing")
 		defer db.Close()
-		if err != nil {
-			fmt.Println("Oh noez, could not connect to database")
-			return
-		} // end of SQL opening
+		// end of SQL opening
 		req.ParseMultipartForm(32 << 20)
 		req.ParseForm()
 		//img := req.FormFile("img")
-		fmt.Println("Yo, its POST for the upload, btw")
+		log.Trace("Yo, its POST for the upload, btw")
 		crutime := time.Now().Unix()
-		fmt.Println("Beep Beep Beep... The time is:", crutime)
+		log.Trace("Beep Beep Beep... The time is:", crutime)
 		file, handler, err := req.FormFile("uploadfile") // Saving file to memory
 		defer file.Close()
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
-		fmt.Println("file: ", file) //Although this means nothing itself, its nice to have in case its a 0 byte file
+		log.Trace("file: ", file) //Although this means nothing itself, its nice to have in case its a 0 byte file
 
 		md5 := md5.New() //Make a MD5 variable, to be changed later... maybe..
 		written, err := io.Copy(md5, file)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 		if written == 0 {
-			fmt.Println("No file written, error!: ", written)
+			log.Error("No md5 written, error!: ", written)
 			return
 		}
 		_, err = file.Seek(0, 0)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 		encodedMd5 := hex.EncodeToString(md5.Sum(nil))[:imgHash]
-		fmt.Println("I just hashed md5! Here it is:", encodedMd5)
+		log.Trace("I just hashed md5! Here it is:", encodedMd5)
 		firstChar := string(encodedMd5[0])
 		secondChar := string(encodedMd5[1])
-		fmt.Println("FileName: \n", handler.Filename)
+		log.Trace("FileName: \n", handler.Filename)
 		var sqlFilename string
 		err = db.QueryRow("SELECT filename FROM files WHERE hash=?", encodedMd5).Scan(&sqlFilename)
 		switch {
 		case err == sql.ErrNoRows:
-			fmt.Println("New file, adding..")
+			log.Debug("New file, adding..")
 			insert, err := db.Query("INSERT INTO files VALUES(?, ?, ?, ?)", encodedMd5, inputKey, handler.Filename, req.RemoteAddr)
 			if err != nil {
-				fmt.Println(err)
+				log.Error(err)
 				return
 			}
 			defer insert.Close()
-			fmt.Println("Added fiel info to table")
+			log.Debug("Added fiel info to table")
 			sqlFilename = handler.Filename
 		case err != nil:
-			fmt.Println(err)
+			log.Error(err)
 			return
 		default:
 		}
 		filepath := path.Join(imgStore, firstChar, secondChar, sqlFilename)
 		f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666) // WRONLY means Write only
-		fmt.Println("filename?: ", filepath)
+		log.Trace("filename?: ", filepath)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 		defer f.Close()
 		written, err = io.Copy(f, file)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 		if written == 0 {
-			fmt.Println("No file written, error!: ", written)
+			log.Error("No file written, error!: ", written)
 			return
 		}
-		fmt.Println("Saved file!")
+		log.Infof("Saved file at %v!", crutime)
 		fileURL := baseURL + urlPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 		return
@@ -241,21 +237,22 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlPasswd))
 	if err != nil {
-		fmt.Println("Oh noez, could not connect to database")
+		log.Errorln("Oh noez, could not connect to database")
 		return
 	}
-	fmt.Println("Oi, mysql did thing")
-	defer db.Close()
+	log.Traceln("Oi, mysql did thing")
+
 	if err != nil {
-		fmt.Println("Oh noez, could not connect to database")
+		log.Errorln("Oh noez, could not connect to database")
 		return
-	} // end of SQL opening
-	fmt.Println("Recieved a req to send the user a file")
+	}
+	defer db.Close() // end of SQL opening
+	log.Traceln("Recieved a req to send the user a file")
 	if len(img) != imgHash {
 		//img = defaultImg //if no image exists, use testing image
 		//fmt.Println("Using Default Image")
 		errorHandler(resp, req, 404)
-		fmt.Println("Well this is awkward, our hash is bad, sending 404")
+		log.Errorln("Well this is awkward, our hash is bad, sending 404")
 		return
 	}
 	firstChar := string(img[0])
@@ -264,19 +261,22 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	if err != nil {
 		//File not found, send 404
 		errorHandler(resp, req, http.StatusNotFound)
-		fmt.Printf("ERROR: %s", err)
+		log.Errorf("ERROR: %s", err)
 		return
 	}
 	var filename string
 	err = db.QueryRow("SELECT filename FROM files WHERE hash=?", img).Scan(&filename)
 	switch {
 	case err == sql.ErrNoRows:
-		fmt.Println("File not in db..")
+		log.Errorln("File not in db..")
+		errorHandler(resp, req, 404)
+		return
 	case err != nil:
-		fmt.Println(err)
+		log.Errorln(err)
+		errorHandler(resp, req, 404)
 		return
 	default:
-		fmt.Println("Filename from sql is:", filename)
+		log.Traceln("Filename from sql is:", filename)
 	}
 	filepath := path.Join(imgStore, firstChar, secondChar, filename)
 	//Check if file exists and open
@@ -294,7 +294,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	//Get the file size
 	fileStat, _ := openfile.Stat()                     //Get info from file
 	fileSize := strconv.FormatInt(fileStat.Size(), 10) //Get file size as a string
-	fmt.Printf("Heres the file size: %s", fileSize)
+	log.Tracef("Heres the file size: %s", fileSize)
 
 	//Send the headers
 	//resp.Header().Set("Content-Disposition", "attachment; filename="+Filename)
@@ -304,37 +304,41 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 	//Send the file
 	//We read 512 bytes from the file already so we reset the offset back to 0
 	openfile.Seek(0, 0)
-	io.Copy(resp, openfile) //'Copy' the file to the client
+	written, err := io.Copy(resp, openfile) //'Copy' the file to the client
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if written == 0 {
+		log.Error("No file written, error!: ", written)
+		return
+	}
+	log.Traceln("Successful upload")
 	return
 }
 
 func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
 	resp.WriteHeader(status)
-	fmt.Println("artifical http error: ", status)
+	log.Error("artifical http error: ", status)
 	fmt.Fprint(resp, "custom ", status)
 }
 
 func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
-	fmt.Println("the req arrived")
+	log.Debug("the req arrived")
 	if req.Body == nil {
 		return
 	}
 	ip := req.RemoteAddr
-	fmt.Println("This request is being requested by:", ip)
+	log.Debug("This request is being requested by:", ip)
 
 	urlSplit := strings.Split(req.URL.Path, "/")
 	urlECount := len(urlSplit)
-	fmt.Println("The url is:", req.URL.Path)
-	fmt.Printf("urlECount: %d\n", urlECount)
+	log.Debug("The url is:", req.URL.Path)
+	log.Debugf("urlECount: %d\n", urlECount)
 	// Checking amt of elements in url (else sends 404)
-
-	if urlECount < 2 {
-		errorHandler(resp, req, http.StatusNotFound)
-		return
-	}
-	// Check for prefix
-	if !strings.HasPrefix(req.URL.Path, urlPrefix) {
+	//Check for prefix
+	if urlECount < 2 || !strings.HasPrefix(req.URL.Path, urlPrefix) {
 		errorHandler(resp, req, http.StatusNotFound)
 		return
 	}
@@ -376,12 +380,12 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 			errorHandler(resp, req, http.StatusNotFound)
 			return
 		}
-		fmt.Printf("urlECount of IMG: %d\n", urlECount)
-		fmt.Printf("Split for image: %v\n", urlSplit)
+		log.Tracef("urlECount of IMG: %d\n", urlECount)
+		log.Tracef("Split for image: %v\n", urlSplit)
 		sendImg(resp, req, urlSplit[i1])
 		//upload(resp, req)
 	case "upload":
-		fmt.Println("Upload selected")
+		log.Traceln("Upload selected")
 		upload(resp, req)
 	case "favicon.ico", "favicon-16x16.png", "favicon-32x32.png", "favicon-96x96.png", "favicon-256x256" +
 		".png", "android-icon-192x192.png", "apple-icon-114x114.png", "apple-icon-120x120.png", "apple-icon-" +
@@ -391,8 +395,10 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		http.ServeFile(resp, req, "favicons/"+urlSplit[switchLen])
 	case "robots.txt":
 		http.ServeFile(resp, req, "robots.txt")
-	default:
+	case "":
 		appPage(resp, req)
+	default:
+		errorHandler(resp, req, 404)
 	}
 
 }
@@ -404,7 +410,7 @@ func createImgDir(imgStore string) {
 			os.MkdirAll(filepath.Join(imgStore, fmt.Sprintf("%x/%x", f, s)), 0755)
 		}
 	}
-	fmt.Println("Finished making/Verifying the directories!")
+	log.Trace("Finished making/Verifying the directories!")
 }
 
 //When everything gets set up, all page setup above this
@@ -431,15 +437,38 @@ func main() {
 		fmt.Println("Oh noez, could not connect to database")
 		return
 	}
+	//Enable logging
+	log.EnableLevel("info")
+	log.EnableLevel("error")
+	log.EnableLevel("debug")
+	log.SetCallDepth(loggingLevel)
+	//Set logging path
+	logPath := path.Join("log/" + strconv.FormatInt(time.Now().Unix(), 10))
+	logLatestPath := path.Join("log/" + "latest")
+	logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer logFile.Close()
+	if _, err := os.Stat(logLatestPath); err == nil {
+		err = os.Remove(logLatestPath)
+	}
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	logLatest, err := os.OpenFile(logLatestPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 
+	defer logLatest.Close()
+	mw := io.MultiWriter(os.Stdout, logFile, logLatest)
+	log.SetOutput(mw)
 	//Debug:
 	//This prints stuff in the console so i get info, just for me
 	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Printf("Error happened!!! Here, take it: %v", err)
+		log.Error("Error happened!!! Here, take it: %v", err)
 	}
-	fmt.Printf("DIR: %v\n", dir)
-	fmt.Printf("Heres the prefix for the url, dummy: %s \n", urlPrefix)
+	log.Debugf("DIR: %v\n", dir)
+	log.Debugf("Heres the prefix for the url, dummy: %s \n", urlPrefix)
 	//end of Debug
 
 	fcgi.Serve(listener, srv) //end of request

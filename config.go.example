@@ -13,4 +13,5 @@ const (
 	baseURL    = "http://localhost" //MUST INCLUDE HTTP/HTTPS
 	recaptchaPrivKey = "google captcha priv key"
 	recaptchaPubKey  = "google captcha pub key"
+	loggingLevel     = 2 // 1 is trace, 2 is debug, 3 is info, 4 is warning... maybe? no, its not
 )
