@@ -193,15 +193,12 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 		firstChar := string(encodedMd5[0])
 		secondChar := string(encodedMd5[1])
 		fmt.Println("FileName: \n", handler.Filename)
-		sqlStr := "SELECT filename FROM files WHERE hash ='" + encodedMd5 + "'"
 		var sqlFilename string
-		err = db.QueryRow(sqlStr).Scan(&sqlFilename)
+		err = db.QueryRow("SELECT filename FROM files WHERE hash=?", encodedMd5).Scan(&sqlFilename)
 		switch {
 		case err == sql.ErrNoRows:
-			sqlDivider := "', '"
-			sqlStr = "INSERT INTO files VALUES('" + encodedMd5 + sqlDivider + inputKey + sqlDivider + handler.Filename + sqlDivider + req.RemoteAddr + "')"
-			fmt.Println("SQL command: ", sqlStr)
-			insert, err := db.Query(sqlStr)
+			fmt.Println("New file, adding..")
+			insert, err := db.Query("INSERT INTO files VALUES(?, ?, ?, ?)", encodedMd5, inputKey, handler.Filename, req.RemoteAddr)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -271,8 +268,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string) {
 		return
 	}
 	var filename string
-	sqlStr := "SELECT filename FROM files WHERE hash ='" + img + "'"
-	err = db.QueryRow(sqlStr).Scan(&filename)
+	err = db.QueryRow("SELECT filename FROM files WHERE hash=?", img).Scan(&filename)
 	switch {
 	case err == sql.ErrNoRows:
 		fmt.Println("File not in db..")
