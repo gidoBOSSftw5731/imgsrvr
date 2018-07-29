@@ -1,6 +1,4 @@
-package main
-
-import "fmt"
+package server
 
 /*HTML meaning guide for my sanity:
 <br>: page break
@@ -9,7 +7,7 @@ import "fmt"
 <!-- and -->: Comments... WHY
 */
 var (
-	firstPage = fmt.Sprintf(`<html>
+	firstPage = `<html>
 
 
 <head>
@@ -42,7 +40,7 @@ Needs JS for captchas {{ .Fn}}
   
 </script>
 </body>
-</html>`, urlPrefix, recaptchaPubKey)
+</html>`
 
 	/*testPage = `<html>
 	  <head><title> This is the second test page!!! </title> </head>
