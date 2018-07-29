@@ -45,6 +45,24 @@ type files struct {
 	UploaderIP  string
 }
 
+type Cookie struct {
+	Name       string
+	Value      string
+	Path       string
+	Domain     string
+	Expires    time.Time
+	RawExpires string
+
+	// MaxAge=0 means no 'Max-Age' attribute specified.
+	// MaxAge<0 means delete cookie now, equivalently 'Max-Age: 0'
+	// MaxAge>0 means Max-Age attribute present and given in seconds
+	MaxAge   int
+	Secure   bool
+	HttpOnly bool
+	Raw      string
+	Unparsed []string // Raw text of unparsed attribute-value pairs
+}
+
 //First page Stuff!
 func appPage(resp http.ResponseWriter, req *http.Request) {
 	firstPageTemplate := template.New("first page templated.")
@@ -61,7 +79,8 @@ func appPage(resp http.ResponseWriter, req *http.Request) {
 	}
 	//upload(resp, req)
 	log.Traceln("Form data: ", field, "\ntData: ", tData)
-	if err = firstPageTemplate.Execute(resp, tData); err != nil {
+	err = firstPageTemplate.Execute(resp, tData)
+	if err != nil {
 		log.Errorf("template execute error: %v", err)
 		return
 
@@ -78,8 +97,12 @@ store file on disk:
 -ReCaptcha										DONE
 -Fonts
 -css..?
--proper logging
+-proper logging									DONE
 -cookies
+-upload bar
+-sessions?
+-statistics
+-link shortening
 */
 
 func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool {
@@ -162,11 +185,17 @@ func upload(resp http.ResponseWriter, req *http.Request) /*(string, error)*/ {
 		crutime := time.Now().Unix()
 		log.Trace("Beep Beep Beep... The time is:", crutime)
 		file, handler, err := req.FormFile("uploadfile") // Saving file to memory
-		defer file.Close()
-		if err != nil {
+		switch err {
+		case nil:
+		case http.ErrMissingFile:
+			log.Error("NO FILE")
+			fmt.Fprintln(resp, "NO FILE")
+			return
+		default:
 			log.Error(err)
 			return
 		}
+		defer file.Close()
 		log.Trace("file: ", file) //Although this means nothing itself, its nice to have in case its a 0 byte file
 
 		md5 := md5.New() //Make a MD5 variable, to be changed later... maybe..
