@@ -343,6 +343,8 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 		return
 	}
 	defer db.Close() // end of SQL opening
+	imgSplit := strings.Split(img, ".")
+	img = imgSplit[0]
 	log.Traceln("Recieved a req to send the user a file")
 	if len(img) != config.imgHash {
 		//img = defaultImg //if no image exists, use testing image
