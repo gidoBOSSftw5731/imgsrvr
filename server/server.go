@@ -107,7 +107,7 @@ func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
 	todoPageTemplate := template.New("first page templated.")
-	todoPageTemplate, err := todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix))
+	todoPageTemplate, err := todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix, config.UrlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -127,7 +127,7 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
 	firstPageTemplate := template.New("first page templated.")
-	firstPageTemplate, err := firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey, config.urlPrefix, config.urlPrefix))
+	firstPageTemplate, err := firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey, config.urlPrefix, config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -149,7 +149,26 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 }
 
-func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool {
+miningPage(resp http.ResponseWriter, req *http.Request, config config) {
+
+	ration := time.Now().Add(24 * time.Hour)
+	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
+	prevCookie, _ := req.Cookie("ip")
+	log.Traceln("Last IP was: ", prevCookie)
+	http.SetCookie(resp, &cookie)
+	todoPageTemplate := template.New("first page templated.")
+	todoPageTemplate, err := todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix, config.UrlPrefix))
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		return
+	}
+	field := req.FormValue("tn")
+	tData := tData{
+		Tn: field,
+	}
+	err = todoPageTemplate.Execute(resp, tData)}
+
+fun ccheckKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool {
 	workingDir, err := os.Getwd()
 	keyFile := workingDir + "/keys"
 	content, err := ioutil.ReadFile(keyFile)
@@ -460,6 +479,8 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		log.Tracef("Split for image: %v\n", urlSplit)
 		sendImg(resp, req, urlSplit[i1], s.config)
 		//upload(resp, req)
+	case "mine":
+		miningPage(resp, req, s.config)
 	case "upload":
 		log.Traceln("Upload selected")
 		upload(resp, req, s.config)

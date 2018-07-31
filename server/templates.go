@@ -41,7 +41,7 @@ Needs JS for captchas {{ .Fn}}
   
 </script>
 </body>
-<footer> <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="%vtodo"> TODO page </a> </footer>
+<footer> <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="%vtodo"> TODO page </a>&nbsp;&nbsp; <a href="%vminer"> Mine me some money to keep this site running! </a> </footer>
 </html>`
 
 	todoPageVar = `<html>
@@ -59,7 +59,7 @@ Needs JS for captchas {{ .Fn}}
 </script>
 <body>
 <header>
-STUFF THAT HAS BEEN DONE OR WILL BE DONE:
+<b>STUFF THAT HAS BEEN DONE OR WILL BE DONE:</b>
 </header>
 
 
@@ -79,12 +79,24 @@ store file on disk:
 -statistics<br>
 -link shortening<br>
 </body>
-<footer> <a href="%v"> Home Page </a>&nbsp;&nbsp; <a href="%vtodo"> TODO page </a> </footer>
-</html>
+<footer> <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="%vtodo"> TODO page </a>&nbsp;&nbsp; <a href="%vminer"> Mine me some money to keep this site running! </a> </footer>
+</html>`
 
-`
+	minePageVar = `<html>
+        <head>
+	<meta name="google-site-verification" content="2QLKtDFPPQwFab4Tx2Gf0TJ1SVMI1lSA4VfKsA90SaY" /> <!-- ssshhh... -->
+	<title>Imagen Dot Click: Miner</title></head>
+	<script src="https://authedmine.com/lib/simple-ui.min.js" async></script>
+	<div class="coinhive-miner" 
+		style="width: 256px; height: 310px"
+			data-key="fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm">
+				<em>Loading...</em>
+				</div>
+<footer> <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="%vtodo"> TODO page </a>&nbsp;&nbsp; <a href="%vminer"> Mine me some money to keep this site running! </a> </footer>	
+</html>	
+	`
 
-	/*testPage = `<html>
+/*testPage = `<html>
 	  <head><title> This is the second test page!!! </title> </head>
 	  <body>
 	  testing text<br>
