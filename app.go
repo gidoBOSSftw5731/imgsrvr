@@ -17,23 +17,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-/* TODO:
-store file on disk:
--Accept the file 								DONE
--create name (from md5)							DONE
--create a database of pub name (hash) to path	DONE
--provide path to file							DONE
--ReCaptcha										DONE
--Fonts
--css..?
--proper logging									DONE
--cookies
--upload bar
--sessions?
--statistics
--link shortening
-*/
-
 // createImgDir creates all image storage directories
 func createImgDir(imgStore string) {
 	for f := 0; f < 16; f++ {

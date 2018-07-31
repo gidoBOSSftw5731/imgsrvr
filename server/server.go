@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	raven "github.com/getsentry/raven-go"
 	"github.com/gidoBOSSftw5731/log"
 	"github.com/haisum/recaptcha"
 )
@@ -99,6 +100,25 @@ func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey,
 		}}
 }
 
+func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
+	expiration := time.Now().Add(24 * time.Hour)
+	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
+	prevCookie, _ := req.Cookie("ip")
+	log.Traceln("Last IP was: ", prevCookie)
+	http.SetCookie(resp, &cookie)
+	todoPageTemplate := template.New("first page templated.")
+	todoPageTemplate, err := todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix))
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		return
+	}
+	field := req.FormValue("tn")
+	tData := tData{
+		Tn: field,
+	}
+	err = todoPageTemplate.Execute(resp, tData)
+}
+
 //First page Stuff!
 func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 	expiration := time.Now().Add(24 * time.Hour)
@@ -107,7 +127,7 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
 	firstPageTemplate := template.New("first page templated.")
-	firstPageTemplate, err := firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey))
+	firstPageTemplate, err := firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey, config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -212,11 +232,13 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		switch err {
 		case nil:
 		case http.ErrMissingFile:
+			raven.CaptureErrorAndWait(err, nil)
 			log.Error("NO FILE")
 			fmt.Fprintln(resp, "NO FILE")
 			return
 		default:
 			log.Error(err)
+			errorHandler(resp, req, 404)
 			return
 		}
 		defer file.Close()
@@ -229,6 +251,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 			return
 		}
 		if written == 0 {
+			raven.CaptureErrorAndWait(err, nil)
 			log.Error("No md5 written, error!: ", written)
 			return
 		}
@@ -440,6 +463,8 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	case "upload":
 		log.Traceln("Upload selected")
 		upload(resp, req, s.config)
+	case "todo":
+		todoPage(resp, req, s.config)
 	case "favicon.ico", "favicon-16x16.png", "favicon-32x32.png", "favicon-96x96.png", "favicon-256x256" +
 		".png", "android-icon-192x192.png", "apple-icon-114x114.png", "apple-icon-120x120.png", "apple-icon-" +
 		"144x144.png", "apple-icon-152x152.png", "apple-icon-180x180.png", "apple-icon-57x57.png", "apple-icon-" +
@@ -449,9 +474,14 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	case "robots.txt":
 		http.ServeFile(resp, req, "robots.txt")
 	case "":
+		//raven.RecoveryHandler(appPage(resp, req, s.config))
 		appPage(resp, req, s.config)
 	default:
 		errorHandler(resp, req, 404)
 	}
 
+}
+
+func init() {
+	raven.SetDSN("https://4615e9d023e94af09b5103526a1423be:4387a2c5c00344299eb4a879f6688736@sentry.io/1252705")
 }

