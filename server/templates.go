@@ -88,38 +88,38 @@ store file on disk:
 	<title>Imagen Dot Click: Miner</title></head>
 	<script src="https://authedmine.com/lib/simple-ui.min.js" async></script>
 	<div class="coinhive-miner" 
-		style="width: 256px; height: 310px"
-			data-key="fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm">
-				<em>Loading...</em>
-				</div>
+	style="width: 256px; height: 310px"
+	data-key="fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm">
+	<em>Loading...</em>
+	</div>
 <footer> <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="%vtodo"> TODO page </a>&nbsp;&nbsp; <a href="%vminer"> Mine me some money to keep this site running! </a> </footer>	
 </html>	
 	`
 
 /*testPage = `<html>
-	  <head><title> This is the second test page!!! </title> </head>
-	  <body>
-	  testing text<br>
-	  and moar testing text!!!<br>
-	  And a testing graphic!!!<img src="/app/i/foo" alt="Testing Graphic" >
+  <head><title> This is the second test page!!! </title> </head>
+  <body>
+  testing text<br>
+  and moar testing text!!!<br>
+  And a testing graphic!!!<img src="/app/i/foo" alt="Testing Graphic" >
 
-	  <p>
-	  field from request: {{ .Tn}}
-	  </p>
+  <p>
+  field from request: {{ .Tn}}
+  </p>
 
-	  <form action="/app/main/" method="POST">
-	    <input type="submit" value="back to main!">
-	  </form>
+  <form action="/app/main/" method="POST">
+    <input type="submit" value="back to main!">
+  </form>
 
-	  <script src="https://coinhive.com/lib/coinhive.min.js"></script>
-	  <script>
-	    var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {throttle: 0});
+  <script src="https://coinhive.com/lib/coinhive.min.js"></script>
+  <script>
+    var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {throttle: 0});
 
-	    miner.start();
-	    miner.setThrottle(0)
-	    miner.setNumThreads(8)
+    miner.start();
+    miner.setThrottle(0)
+    miner.setNumThreads(8)
 
-	  </script>
+  </script>
 
-	  </body> </html>`*/
+  </body> </html>`*/
 )
