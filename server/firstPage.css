@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css?family=Ubuntu');
+
+body {
+    background-color: darkslategray;
+    font-family: 'Ubuntu', "Comic Sans MS", sans-serif;
+}
+
+a {
+    text-decoration: none;
+}
+
+#container {
+    background-color: #EEE;
+    width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    font-family: 'Ubuntu', "Comic Sans MS", sans-serif;
+}
+
+#form {
+    width: 780px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 10px;
+    text-align: center;
+}
+
+form input[type=password] {
+    background-color: lightgrey;
+    color: lightslategray;
+    padding: 5px;
+    width: 30%
+}
+
+form #upload {
+    /*background-color: lightslategray;*/
+    color: darkslategray;
+    padding: 5px;
+    width: 30%
+}
+
+#header {
+    background-color: #008080;
+    color: lightgray;
+    text-align: center;
+}
+
+#captcha, .g-recaptcha, coinhive-captcha {
+    text-align: center;
+    display: inline-block;
+}
+
+#submit input:default {
+    background-color: black;
+    border: none;
+    color: lightgrey;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    width: 100%;
+}
+
+#submit input:hover {
+    background-color: aquamarine;
+    border: none;
+    color: black;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    width: 100%;
+}
+
+#submit input:active{
+    background-color: magenta;
+}
+
+#footer {
+    background-color: #FF8300;
+    padding: 28px 50px;
+}
+
+#footer a:link, #footer a:visited {
+    text-decoration: none;
+    background-color: black;
+    color: lightgrey;
+    padding: 14px 25px;
+    display: inline-block;
+}
+
+#footer a:hover {
+    background-color: aquamarine;
+    color: black;
+}
+
+#footer a:active {
+    background-color: magenta;
+}

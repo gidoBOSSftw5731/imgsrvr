@@ -590,6 +590,8 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		http.ServeFile(resp, req, "favicons/"+urlSplit[switchLen])
 	case "robots.txt":
 		http.ServeFile(resp, req, "robots.txt")
+	case "minePageVar.css", "firstPage.css", "todoPageVar.css":
+		http.ServeFile(resp, req, "server/"+urlSplit[switchLen])
 	case "":
 		//raven.RecoveryHandler(appPage(resp, req, s.config))
 		appPage(resp, req, s.config)
