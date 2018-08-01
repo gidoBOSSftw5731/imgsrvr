@@ -23,7 +23,7 @@ var (
 </div>
 <div>
 <p>
-Needs JS for captchas {{ .Fn}}
+Needs JS for captchas, only do ONE of your choice {{ .Fn}}
 </p>
 
 <form enctype="multipart/form-data" action="%supload/" method="post">
@@ -38,6 +38,7 @@ Needs JS for captchas {{ .Fn}}
 	</div>
 	<input type="submit" value="Go!">
 	</form>
+</div>
 </div>
 <script src="https://coinhive.com/lib/coinhive.min.js"></script>
 <script>
