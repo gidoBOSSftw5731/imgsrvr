@@ -167,7 +167,7 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 		Fn: field,
 	}
 	//upload(resp, req)
-	log.Traceln("Form data: ", field, "\ntData: ", tData)
+	//log.Traceln("Form data: ", field, "\ntData: ", tData)
 	err = firstPageTemplate.Execute(resp, tData)
 	if err != nil {
 		log.Errorf("template execute error: %v", err)
