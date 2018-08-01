@@ -73,7 +73,7 @@ type Cookie struct {
 	// MaxAge>0 means Max-Age attribute present and given in seconds
 	MaxAge   int
 	Secure   bool
-	HttpOnly bool
+	HTTPOnly bool
 	Raw      string
 	Unparsed []string // Raw text of unparsed attribute-value pairs
 }
@@ -83,11 +83,12 @@ type config struct {
 	imgHash                                                                                                             int
 }
 
+// FastCGIServer is how the config constants get to the server package.
 type FastCGIServer struct {
 	config config
 }
 
-// NewFastcgiServer is an implomentation of fastcgi server
+// NewFastcgiServer is an implomentation of fastcgi server.
 func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey, coinhiveCaptchaPub, coinhiveCaptchaPriv string, imgHash int) *FastCGIServer {
 	return &FastCGIServer{
 		config: config{
@@ -103,6 +104,15 @@ func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey,
 		}}
 }
 
+/*HTML meaning guide for my sanity:
+<br>: page break
+<html> and </html>: beginning and end of html section
+<body> and </body>: main part with text
+<!-- and -->: Comments... WHY
+<a href="url"> and </a>: links
+<p> and </p>: margin
+*/
+
 func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
 	expiration := time.Now().Add(24 * time.Hour)
 	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
@@ -110,9 +120,17 @@ func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
 	todoPageTemplate := template.New("first page templated.")
-	todoPageTemplate, err := todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	content, err := ioutil.ReadFile("server/todoPageVar.html")
+	todoPageVar := string(content)
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
+		errorHandler(resp, req, 404)
+		return
+	}
+	todoPageTemplate, err = todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		errorHandler(resp, req, 404)
 		return
 	}
 	field := req.FormValue("tn")
@@ -130,7 +148,14 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
 	firstPageTemplate := template.New("first page templated.")
-	firstPageTemplate, err := firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey, config.coinhiveCaptchaPub, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	content, err := ioutil.ReadFile("server/firstPage.html")
+	firstPage := string(content)
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		errorHandler(resp, req, 404)
+		return
+	}
+	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey, config.coinhiveCaptchaPub, config.urlPrefix, config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -152,15 +177,42 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 }
 
-func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
+func megaMinePage(resp http.ResponseWriter, req *http.Request, config config) {
+	megaMineTemplate := template.New("first page templated.")
+	content, err := ioutil.ReadFile("server/megaMineVar.html")
+	megaMineVar := string(content)
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		errorHandler(resp, req, 404)
+		return
+	}
+	megaMineTemplate, err = megaMineTemplate.Parse(fmt.Sprintf(megaMineVar, config.urlPrefix, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		return
+	}
+	field := req.FormValue("mn")
+	tData := tData{
+		Fn: field,
+	}
+	err = megaMineTemplate.Execute(resp, tData)
+}
 
+func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
 	expiration := time.Now().Add(24 * time.Hour)
 	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
 	prevCookie, _ := req.Cookie("ip")
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
 	minePageTemplate := template.New("first page templated.")
-	minePageTemplate, err := minePageTemplate.Parse(fmt.Sprintf(minePageVar, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	content, err := ioutil.ReadFile("server/minePageVar.html")
+	minePageVar := string(content)
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		errorHandler(resp, req, 404)
+		return
+	}
+	minePageTemplate, err = minePageTemplate.Parse(fmt.Sprintf(minePageVar, config.urlPrefix, config.urlPrefix, config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -523,6 +575,8 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		//upload(resp, req)
 	case "miner":
 		miningPage(resp, req, s.config)
+	case "megamine":
+		megaMinePage(resp, req, s.config)
 	case "upload":
 		log.Traceln("Upload selected")
 		upload(resp, req, s.config)
