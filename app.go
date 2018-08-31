@@ -29,17 +29,34 @@ func createImgDir(imgStore string) {
 
 func logger() error {
 	log.SetCallDepth(loggingLevel)
-	log.EnableLevel("info")
-	log.EnableLevel("error")
-	log.EnableLevel("debug")
-	log.EnableLevel("trace")
-
+	switch loggingLevel {
+	case 0:
+		log.EnableLevel("fatal")
+	case 1:
+		log.EnableLevel("fatal")
+		log.EnableLevel("error")
+	case 2:
+		log.EnableLevel("fatal")
+		log.EnableLevel("error")
+		log.EnableLevel("info")
+	case 3:
+		log.EnableLevel("fatal")
+		log.EnableLevel("error")
+		log.EnableLevel("info")
+		log.EnableLevel("debug")
+	case 4:
+		log.EnableLevel("fatal")
+		log.EnableLevel("error")
+		log.EnableLevel("info")
+		log.EnableLevel("debug")
+		log.EnableLevel("trace")
+	}
 	//Set logging path
 	logPath := path.Join("log/" + time.Now().Format("20060102"))
 	logLatestPath := path.Join("log/" + "latest")
 	logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		return fmt.Errorf("couldnt open Time depended logfile(%v): %v", logPath, err)
+		return fmt.Errorf("couldnt open Time dependent logfile(%v): %v", logPath, err)
 	}
 	defer logFile.Close()
 
@@ -52,7 +69,7 @@ func logger() error {
 	}
 	logLatest, err := os.OpenFile(logLatestPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		return fmt.Errorf("couldnt open non-Time depended logfile(%v): %v", logLatestPath, err)
+		return fmt.Errorf("couldnt open non-Time dependent logfile(%v): %v", logLatestPath, err)
 	}
 	defer logLatest.Close()
 

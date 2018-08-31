@@ -24,17 +24,20 @@ import (
 	"github.com/haisum/recaptcha"
 )
 
+//tData is a struct for HTTP inputs.
 type tData struct {
 	Fn string
 	Tn string
 }
 
+//FileHeader is used for when you download a file from the client. It stores all relevant information in Header.
 type FileHeader struct {
 	Filename string
 	Header   textproto.MIMEHeader
 	// contains filtered or unexported fields
 }
 
+//files is used for implementing user-data into SQL databases... in theory..
 type files struct {
 	Hash        string
 	UploaderKey string
@@ -42,24 +45,31 @@ type files struct {
 	UploaderIP  string
 }
 
+//Manager is used for making session cookies.
 type Manager struct {
 	cookieName  string     //private cookiename
 	lock        sync.Mutex // protects session
 	provider    Provider
 	maxlifetime int64
 }
+
+//Provider is used for storing session tokens and reading them back.
 type Provider interface {
 	SessionInit(sid string) (Session, error)
 	SessionRead(sid string) (Session, error)
 	SessionDestroy(sid string) error
 	SessionGC(maxLifeTime int64)
 }
+
+//Session is a interface for interacting with sessions
 type Session interface {
 	Set(key, value interface{}) error //set session value
 	Get(key interface{}) interface{}  //get session value
 	Delete(key interface{}) error     //delete session value
 	SessionID() string                //back current sessionID
 }
+
+//Cookie is a struct for creating data for cookies
 type Cookie struct {
 	Name       string
 	Value      string
@@ -78,17 +88,18 @@ type Cookie struct {
 	Unparsed []string // Raw text of unparsed attribute-value pairs
 }
 
+//Config is a struct for importing the config from main.go
 type config struct {
 	urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey, coinhiveCaptchaPub, coinhiveCaptchaPriv string
 	imgHash                                                                                                             int
 }
 
-// FastCGIServer is how the config constants get to the server package.
+//FastCGIServer is how the config constants get to the server package.
 type FastCGIServer struct {
 	config config
 }
 
-// NewFastcgiServer is an implomentation of fastcgi server.
+//NewFastCGIServer is an implementation of fastcgi server.
 func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey, coinhiveCaptchaPub, coinhiveCaptchaPriv string, imgHash int) *FastCGIServer {
 	return &FastCGIServer{
 		config: config{
@@ -113,12 +124,18 @@ func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey,
 <p> and </p>: margin
 */
 
-func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
+//cookieCheck is a func implemented in every Page func to handle the cookies.
+func cookieCheck(resp http.ResponseWriter, req *http.Request, config config) {
 	expiration := time.Now().Add(24 * time.Hour)
 	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
 	prevCookie, _ := req.Cookie("ip")
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
+}
+
+//todoPage is a standard func for the setup of the todo page.
+func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
+	cookieCheck(resp, req, config)
 	todoPageTemplate := template.New("first page templated.")
 	content, err := ioutil.ReadFile("server/todoPageVar.html")
 	todoPageVar := string(content)
@@ -140,13 +157,9 @@ func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
 	err = todoPageTemplate.Execute(resp, tData)
 }
 
-//First page Stuff!
+//appPage is a standard func for the setup of the main page.
 func appPage(resp http.ResponseWriter, req *http.Request, config config) {
-	expiration := time.Now().Add(24 * time.Hour)
-	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
-	prevCookie, _ := req.Cookie("ip")
-	log.Traceln("Last IP was: ", prevCookie)
-	http.SetCookie(resp, &cookie)
+	cookieCheck(resp, req, config)
 	firstPageTemplate := template.New("first page templated.")
 	content, err := ioutil.ReadFile("server/firstPage.html")
 	firstPage := string(content)
@@ -155,7 +168,8 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 		errorHandler(resp, req, 404)
 		return
 	}
-	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey, config.coinhiveCaptchaPub, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey,
+		config.coinhiveCaptchaPub, config.urlPrefix, config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -177,6 +191,7 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 }
 
+//megaMinePage is a standard func for the setup of the megamine page.
 func megaMinePage(resp http.ResponseWriter, req *http.Request, config config) {
 	megaMineTemplate := template.New("first page templated.")
 	content, err := ioutil.ReadFile("server/megaMineVar.html")
@@ -186,7 +201,8 @@ func megaMinePage(resp http.ResponseWriter, req *http.Request, config config) {
 		errorHandler(resp, req, 404)
 		return
 	}
-	megaMineTemplate, err = megaMineTemplate.Parse(fmt.Sprintf(megaMineVar, config.urlPrefix, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	megaMineTemplate, err = megaMineTemplate.Parse(fmt.Sprintf(megaMineVar, config.urlPrefix, config.urlPrefix,
+		config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -199,11 +215,7 @@ func megaMinePage(resp http.ResponseWriter, req *http.Request, config config) {
 }
 
 func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
-	expiration := time.Now().Add(24 * time.Hour)
-	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
-	prevCookie, _ := req.Cookie("ip")
-	log.Traceln("Last IP was: ", prevCookie)
-	http.SetCookie(resp, &cookie)
+	cookieCheck(resp, req, config)
 	minePageTemplate := template.New("first page templated.")
 	content, err := ioutil.ReadFile("server/minePageVar.html")
 	minePageVar := string(content)
@@ -212,7 +224,8 @@ func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
 		errorHandler(resp, req, 404)
 		return
 	}
-	minePageTemplate, err = minePageTemplate.Parse(fmt.Sprintf(minePageVar, config.urlPrefix, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	minePageTemplate, err = minePageTemplate.Parse(fmt.Sprintf(minePageVar, config.urlPrefix, config.urlPrefix,
+		config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -224,6 +237,8 @@ func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
 	err = minePageTemplate.Execute(resp, tData)
 }
 
+//checkKey is a function to read the key given by the user and check it against a list of known-good keys
+//to ensure validity of the key before handling any sensitive parts of the system.
 func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool {
 	workingDir, err := os.Getwd()
 	keyFile := workingDir + "/keys"
@@ -248,6 +263,7 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool
 	return false // last call if all else fails
 }
 
+//verifyCCaptcha is a func to check the validity of the response from the coinhive captcha
 func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) (string, error) {
 	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
 
@@ -275,6 +291,7 @@ func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) 
 	return string(wBody), nil
 }
 
+//upload is the func to take the users file  and upload it.
 func upload(resp http.ResponseWriter, req *http.Request, config config) /*(string, error)*/ {
 	inputKey := req.FormValue("fn")
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
