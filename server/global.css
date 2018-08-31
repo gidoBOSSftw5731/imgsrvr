@@ -39,6 +39,7 @@ a {
     color: lightgray;
     text-align: center;
     padding: 10px
+    padding-top: 0px
 }
 #footer {
     background-color: #FF8300;
