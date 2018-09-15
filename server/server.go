@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	raven "github.com/getsentry/raven-go"
+	//raven "github.com/getsentry/raven-go"
 	"github.com/gidoBOSSftw5731/log"
 	"github.com/haisum/recaptcha"
 )
@@ -343,7 +343,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		switch err {
 		case nil:
 		case http.ErrMissingFile:
-			raven.CaptureErrorAndWait(err, nil)
+			//raven.CaptureErrorAndWait(err, nil)
 			log.Error("NO FILE")
 			fmt.Fprintln(resp, "NO FILE")
 			return
@@ -362,7 +362,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 			return
 		}
 		if written == 0 {
-			raven.CaptureErrorAndWait(err, nil)
+			//raven.CaptureErrorAndWait(err, nil)
 			log.Error("No md5 written, error!: ", written)
 			return
 		}
@@ -602,5 +602,5 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 }
 
 func init() {
-	raven.SetDSN("https://4615e9d023e94af09b5103526a1423be:4387a2c5c00344299eb4a879f6688736@sentry.io/1252705")
+	//raven.SetDSN("https://4615e9d023e94af09b5103526a1423be:4387a2c5c00344299eb4a879f6688736@sentry.io/1252705")
 }
