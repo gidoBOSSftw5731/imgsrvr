@@ -333,7 +333,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		log.Debug("Oi, mysql did thing")
 		defer db.Close()
 		// end of SQL opening
-		req.ParseMultipartForm(32 << 20)
+		req.ParseMultipartForm(2048 << 20)
 		req.ParseForm()
 		//img := req.FormFile("img")
 		log.Trace("Yo, its POST for the upload, btw")
@@ -489,6 +489,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 	//resp.Header().Set("Content-Disposition", "attachment; filename="+Filename)
 	resp.Header().Set("Content-Type", fileContentType)
 	resp.Header().Set("Content-Length", fileSize)
+	//resp.AppendHeader("content-disposition", "attachment; filename=\"" + filename +"\"");
 
 	//Send the file
 	//We read 512 bytes from the file already so we reset the offset back to 0
@@ -592,6 +593,9 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		http.ServeFile(resp, req, "robots.txt")
 	case "minePageVar.css", "firstPage.css", "todoPageVar.css":
 		http.ServeFile(resp, req, "server/"+urlSplit[switchLen])
+	case "github", "git":
+		github := "https://github.com/gidoBOSSftw5731"
+		http.Redirect(resp, req, github, http.StatusSeeOther)
 	case "":
 		//raven.RecoveryHandler(appPage(resp, req, s.config))
 		appPage(resp, req, s.config)
