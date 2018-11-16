@@ -350,7 +350,12 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		log.Debug("Oi, mysql did thing")
 		defer db.Close()
 		// end of SQL opening
-		req.ParseMultipartForm(32 << 20)
+		err = req.ParseMultipartForm(107374182400) // max upload in... bytes..?
+		if err != nil {
+			errorHandler(resp, req, http.StatusBadRequest)
+			log.Errorf("File too Big! err = %v", err)
+			return
+		}
 		req.ParseForm()
 		//img := req.FormFile("img")
 		log.Trace("Yo, its POST for the upload, btw")
@@ -392,7 +397,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		log.Trace("I just hashed md5! Here it is:", encodedMd5)
 		firstChar := string(encodedMd5[0])
 		secondChar := string(encodedMd5[1])
-		log.Trace("FileName: \n", handler.Filename)
+		log.Tracef("FileName: %v\n", handler.Filename)
 		var sqlFilename string
 		err = db.QueryRow("SELECT filename FROM files WHERE hash=?", encodedMd5).Scan(&sqlFilename)
 		switch {
@@ -610,12 +615,12 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	case "css":
 		http.ServeFile(resp, req, "server/"+urlSplit[switchLen+1])
 	case "js":
-		i := switchLen + 1
-		if i >= len(urlSplit) {
+		i := switchLen + 2
+		if i >= len(urlSplit)+1 {
 			errorHandler(resp, req, 404)
 			return
 		}
-		var buf string
+		buf := "/"
 		for i <= len(urlSplit) {
 			buf += urlSplit[i-1]
 			i++
