@@ -16,7 +16,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	raven "github.com/getsentry/raven-go"
@@ -43,30 +42,6 @@ type files struct {
 	UploaderKey string
 	Filename    string
 	UploaderIP  string
-}
-
-//Manager is used for making session cookies.
-type Manager struct {
-	cookieName  string     //private cookiename
-	lock        sync.Mutex // protects session
-	provider    Provider
-	maxlifetime int64
-}
-
-//Provider is used for storing session tokens and reading them back.
-type Provider interface {
-	SessionInit(sid string) (Session, error)
-	SessionRead(sid string) (Session, error)
-	SessionDestroy(sid string) error
-	SessionGC(maxLifeTime int64)
-}
-
-//Session is a interface for interacting with sessions
-type Session interface {
-	Set(key, value interface{}) error //set session value
-	Get(key interface{}) interface{}  //get session value
-	Delete(key interface{}) error     //delete session value
-	SessionID() string                //back current sessionID
 }
 
 //Cookie is a struct for creating data for cookies
@@ -132,6 +107,10 @@ func cookieCheck(resp http.ResponseWriter, req *http.Request, config config) {
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
 }
+
+/*func prepareTemplate(source string) (*template.New, string, error) {
+
+}*/
 
 //todoPage is a standard func for the setup of the todo page.
 func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
