@@ -1,22 +1,3 @@
-@import url('https://fonts.googleapis.com/css?family=Ubuntu');
-
-body {
-    background-color: darkslategray;
-    font-family: 'Ubuntu', "Comic Sans MS", sans-serif;
-}
-
-a {
-    text-decoration: none;
-}
-
-#container {
-    background-color: #EEE;
-    width: 800px;
-    margin-left: auto;
-    margin-right: auto;
-    font-family: 'Ubuntu', "Comic Sans MS", sans-serif;
-}
-
 #form {
     width: 780px;
     margin-left: auto;
@@ -39,15 +20,19 @@ form #upload {
     width: 30%
 }
 
-#header {
-    background-color: #008080;
-    color: lightgray;
-    text-align: center;
-}
-
 #captcha, .g-recaptcha, coinhive-captcha {
     text-align: center;
     display: inline-block;
+}
+
+ #myProgress {
+    width: 100%;
+    background-color: grey;
+}
+#myBar {
+    width: 1%;
+    height: 30px;
+    background-color: green;
 }
 
 #submit input:default {
@@ -75,27 +60,5 @@ form #upload {
 }
 
 #submit input:active{
-    background-color: magenta;
-}
-
-#footer {
-    background-color: #FF8300;
-    padding: 28px 50px;
-}
-
-#footer a:link, #footer a:visited {
-    text-decoration: none;
-    background-color: black;
-    color: lightgrey;
-    padding: 14px 25px;
-    display: inline-block;
-}
-
-#footer a:hover {
-    background-color: aquamarine;
-    color: black;
-}
-
-#footer a:active {
     background-color: magenta;
 }
