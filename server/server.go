@@ -382,7 +382,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		switch {
 		case err == sql.ErrNoRows:
 			log.Debug("New file, adding..")
-			insert, err := db.Query("INSERT INTO files VALUES(?, ?, ?, ?)", encodedMd5, inputKey, handler.Filename, req.RemoteAddr)
+			insert, err := db.Exec("INSERT INTO files VALUES(?, ?, ?, ?)", encodedMd5, inputKey, handler.Filename, req.RemoteAddr)
 			if err != nil {
 				log.Error(err)
 				return

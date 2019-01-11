@@ -1,6 +1,7 @@
 package sessions
 
 import (
+	"database/sql"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -34,7 +35,7 @@ const (
 
 //New is a function to create a new session cookie and write it to the client.
 //Im relying on an external system to not overwrite the cookie, though a check will be present.
-func New(resp http.ResponseWriter, req *http.Request) error {
+func New(resp http.ResponseWriter, req *http.Request, sqlPass string) error {
 	log.Traceln("Beginning to make a new session for the client")
 	lastcookie, _ := req.Cookie("session")
 	if lastcookie != nil {
@@ -50,5 +51,33 @@ func New(resp http.ResponseWriter, req *http.Request) error {
 		session += allowedCharsSplit[x]          // Using x to navigate the split for one character
 	}
 	cookie := http.Cookie{Name: "session", Value: session, Expires: expiration}
+
+	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlPass))
+	if err != nil {
+		log.Error("Oh noez, could not connect to database")
+		return fmt.Errorf("Error in SQL! %v", err)
+	}
+	log.Debug("Oi, mysql did thing")
+	defer db.Close()
+	var token string
+	err = db.QueryRow("SELECT filename FROM sessions WHERE token=?", session).Scan(&token)
+	switch {
+	case err == sql.ErrNoRows:
+		log.Debug("New session, adding..")
+		_, err := db.Exec("INSERT INTO sessions VALUES(?, ?, ?, ?)", session, expiration, req.RemoteAddr)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		log.Debug("Added token info to table")
+	case err != nil:
+		log.Error(err)
+		return err
+	default:
+		return fmt.Errorf("SQL_ROW_EXISTS")
+	}
+
+	http.SetCookie(resp, &cookie)
+
 	return nil
 }
