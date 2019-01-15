@@ -382,12 +382,12 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		switch {
 		case err == sql.ErrNoRows:
 			log.Debug("New file, adding..")
-			insert, err := db.Exec("INSERT INTO files VALUES(?, ?, ?, ?)", encodedMd5, inputKey, handler.Filename, req.RemoteAddr)
+			_, err := db.Exec("INSERT INTO files VALUES(?, ?, ?, ?)", encodedMd5, inputKey, handler.Filename, req.RemoteAddr) // the _ var used to be `insert` but was removed due to an issue
 			if err != nil {
 				log.Error(err)
 				return
 			}
-			defer insert.Close()
+			//defer insert.Close()
 			log.Debug("Added fiel info to table")
 			sqlFilename = handler.Filename
 		case err != nil:
