@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	raven "github.com/getsentry/raven-go"
+	//raven "github.com/getsentry/raven-go"
 	"github.com/gidoBOSSftw5731/log"
 	"github.com/haisum/recaptcha"
 )
@@ -614,6 +614,4 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 }
 
-func init() {
-	raven.SetDSN("https://4615e9d023e94af09b5103526a1423be:4387a2c5c00344299eb4a879f6688736@sentry.io/1252705")
-}
+
