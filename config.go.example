@@ -9,6 +9,7 @@ const (
 	urlPrefix           = "/"                                                       //Must be atleast a "/" AND end with a "/"
 	defaultImg          = "/home/gido5731/work/imgsrvr/testingpics/Graphic1-50.jpg" // not actually in use right now dont bother with this
 	imgHash             = 6
+	sqlPasswd           = ""         // MySQL password
 	imgStore            = "/var/tmp/imgStorage/"
 	baseURL             = "http://localhost" //MUST INCLUDE HTTP/HTTPS
 	recaptchaPrivKey    = "google captcha priv key"

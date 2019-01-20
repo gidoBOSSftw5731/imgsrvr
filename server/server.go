@@ -344,7 +344,6 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		switch err {
 		case nil:
 		case http.ErrMissingFile:
-			raven.CaptureErrorAndWait(err, nil)
 			log.Error("NO FILE")
 			fmt.Fprintln(resp, "NO FILE")
 			return
@@ -363,7 +362,6 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 			return
 		}
 		if written == 0 {
-			raven.CaptureErrorAndWait(err, nil)
 			log.Error("No md5 written, error!: ", written)
 			return
 		}
@@ -487,7 +485,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 	log.Tracef("Heres the file size: %s", fileSize)
 
 	//Send the headers
-	//resp.Header().Set("Content-Disposition", "attachment; filename="+Filename)
+	resp.Header().Set("Content-Disposition", "attachment; filename="+filename)
 	resp.Header().Set("Content-Type", fileContentType)
 	resp.Header().Set("Content-Length", fileSize)
 
@@ -613,5 +611,3 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 }
-
-
