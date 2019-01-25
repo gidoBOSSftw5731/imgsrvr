@@ -273,6 +273,9 @@ func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) 
 //upload is the func to take the users file  and upload it.
 func upload(resp http.ResponseWriter, req *http.Request, config config) /*(string, error)*/ {
 	inputKey := req.FormValue("fn")
+
+	log.Println("got into the func")
+
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
 	re := recaptcha.R{
 		Secret: config.recaptchaPrivKey,
@@ -285,12 +288,14 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		return
 	}
 	log.Tracef("Coinhive's response: %v\n", coinhiveResp)
-	isValid2 := strings.HasPrefix(coinhiveResp, `{"success":true,"created":`)
-	isValid := re.Verify(*req)
+	isValid2 := strings.HasPrefix(coinhiveResp, `{"success":true,"created":`) // coinhive
+	isValid := re.Verify(*req)                                                // recaptcha
 	if !isValid && !isValid2 {
 		fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
 		fmt.Printf("Invalid Captcha! These errors ocurred: %v", re.LastError())
 		return
+	} else {
+		log.Traceln("recieved a valid captcha response!")
 	}
 
 	if checkKey(resp, req, inputKey) == true {
