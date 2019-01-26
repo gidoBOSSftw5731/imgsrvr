@@ -265,7 +265,7 @@ func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) 
 
 	/*w, err := http.DefaultClient.Do(r)
 	if err != nil {
-		return "", fmt.Errorf("Error while making captcha request: %v", err)
+		return "", fmt.Errorf("Error     while making captcha request: %v", err)
 	}*/
 	defer w.Body.Close()
 
