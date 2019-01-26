@@ -274,7 +274,7 @@ func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) 
 func upload(resp http.ResponseWriter, req *http.Request, config config) /*(string, error)*/ {
 	inputKey := req.FormValue("fn")
 
-	log.Println("got into the func")
+	fmt.Println("got into the func")
 
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
 	re := recaptcha.R{
