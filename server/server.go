@@ -218,6 +218,7 @@ func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 //checkKey is a function to read the key given by the user and check it against a list of known-good keys
 //to ensure validity of the key before handling any sensitive parts of the system.
+//needs optimization
 func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool {
 	workingDir, err := os.Getwd()
 	keyFile := workingDir + "/keys"
