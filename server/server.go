@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"sort"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +21,11 @@ import (
 	//raven "github.com/getsentry/raven-go"
 	"github.com/gidoBOSSftw5731/log"
 	"github.com/haisum/recaptcha"
+)
+
+var (
+	keyFilename = "keys"
+	keys        = make(map[string]bool)
 )
 
 //tData is a struct for HTTP inputs.
@@ -102,8 +107,15 @@ func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey,
 //cookieCheck is a func implemented in every Page func to handle the cookies.
 func cookieCheck(resp http.ResponseWriter, req *http.Request, config config) {
 	expiration := time.Now().Add(24 * time.Hour)
-	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
+
+	cookie := http.Cookie{
+		Name:    "ip",
+		Value:   req.RemoteAddr,
+		Expires: expiration,
+	}
+
 	prevCookie, _ := req.Cookie("ip")
+
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
 }
@@ -216,30 +228,28 @@ func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
 	err = minePageTemplate.Execute(resp, tData)
 }
 
-//checkKey is a function to read the key given by the user and check it against a list of known-good keys
-//to ensure validity of the key before handling any sensitive parts of the system.
-func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool {
-	workingDir, err := os.Getwd()
-	keyFile := workingDir + "/keys"
-	content, err := ioutil.ReadFile(keyFile)
+// readKeys reads a key file from disk, returning a map to use in verification.
+func readKeys(kf string) error {
+	// Read the key content from the full file path.
+	content, err := ioutil.ReadFile(kf)
 	if err != nil {
 		log.Errorln(err)
-		return false
+		return err
 	}
-	keySplit := strings.Split(string(content), ",")
-	if string(content) == "" {
-		errorHandler(resp, req, 404)
-		return false
+
+	// Fill the map with keys seen.
+	for _, key := range strings.Split(string(content), ",") {
+		keys[key] = true
 	}
-	if len(keySplit) == 0 {
-		log.Fatal("NO KEYS")
+	return nil
+}
+
+// checkKey simply looks in the keys map for evidence of a key.
+func checkKey(inputKey string) bool {
+	if _, ok := keys[inputKey]; !ok {
+		return false // last call if all else fails
 	}
-	sort.Strings(keySplit)
-	n := sort.SearchStrings(keySplit, inputKey)
-	if n < len(keySplit) && keySplit[n] == inputKey {
-		return true
-	}
-	return false // last call if all else fails
+	return true
 }
 
 //verifyCCaptcha is a func to check the validity of the response from the coinhive captcha
@@ -298,7 +308,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		log.Traceln("recieved a valid captcha response!")
 	}
 
-	if checkKey(resp, req, inputKey) == true {
+	if checkKey(inputKey) == true {
 		log.Debugln("Key success!\n")
 
 	} else {
@@ -517,6 +527,16 @@ func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
 }
 
 func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	// Find and read the keys file into the keys map.
+	workingDir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("failed to read cwd: %v", err)
+	}
+	kf := filepath.Join(workingDir, keyFilename)
+	err = readKeys(kf)
+	if err != nil {
+		log.Fatalf("failed to read keyfile(%v) from disk: %v", keyFilename, err)
+	}
 
 	log.Debug("the req arrived")
 	if req.Body == nil {
