@@ -500,7 +500,9 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 	log.Tracef("Heres the file size: %s", fileSize)
 
 	//Send the headers
-	resp.Header().Set("Content-Disposition", "attachment; inline; filename="+filename)
+	//resp.Header().Set("Content-Disposition", fmt.Sprintf("filename=\"%v\"", filename))
+	resp.Header().Set("Content-Disposition", "inline;"+fmt.Sprintf("filename=\"%v\"", filename))
+	//resp.Header().Set("Content-Disposition", "attachment")
 	resp.Header().Set("Content-Type", fileContentType)
 	resp.Header().Set("Content-Length", fileSize)
 
