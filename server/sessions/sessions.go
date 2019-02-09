@@ -30,7 +30,7 @@ type Cookie struct {
 }
 
 const (
-	allowedChars = "!#$%&'()*+,-./23456789:;<=>?@ABCDEFGHJKLMNOPRSTUVWXYZ[]^_abcdefghijkmnopqrstuvwxyz{|}~" // 86 chars
+	allowedChars = "!#$%&'()*+,-./23456789:<=>?@ABCDEFGHJKLMNOPRSTUVWXYZ[]^_abcdefghijkmnopqrstuvwxyz{|}~" // 85 chars
 )
 
 //New is a function to create a new session cookie and write it to the client.
@@ -41,7 +41,7 @@ func New(resp http.ResponseWriter, req *http.Request, sqlPass string) error {
 	if lastcookie != nil {
 		return fmt.Errorf("SESSION_EXISTS")
 	}
-	expiration := time.Now().Add(168 * time.Hour)
+	expiration := time.Now().Add(24 * time.Hour)
 	allowedCharsSplit := strings.Split(allowedChars, "")
 	var session string
 	var x int
@@ -60,11 +60,11 @@ func New(resp http.ResponseWriter, req *http.Request, sqlPass string) error {
 	log.Debug("Oi, mysql did thing")
 	defer db.Close()
 	var token string
-	err = db.QueryRow("SELECT filename FROM sessions WHERE token=?", session).Scan(&token)
+	err = db.QueryRow("SELECT token FROM sessions WHERE token=?", session).Scan(&token)
 	switch {
 	case err == sql.ErrNoRows:
 		log.Debug("New session, adding..")
-		_, err := db.Exec("INSERT INTO sessions VALUES(?, ?, ?, ?)", session, expiration, req.RemoteAddr)
+		_, err := db.Exec("INSERT INTO sessions VALUES(?, ?, ?)", session, expiration, req.RemoteAddr)
 		if err != nil {
 			log.Error(err)
 			return err

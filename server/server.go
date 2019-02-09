@@ -19,6 +19,7 @@ import (
 	"time"
 
 	//raven "github.com/getsentry/raven-go"
+	"./sessions"
 	"github.com/gidoBOSSftw5731/log"
 	"github.com/haisum/recaptcha"
 )
@@ -245,9 +246,21 @@ func readKeys(kf string) error {
 }
 
 // checkKey simply looks in the keys map for evidence of a key.
-func checkKey(inputKey string) bool {
+func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlPasswd string) bool {
 	if _, ok := keys[inputKey]; !ok {
 		return false // last call if all else fails
+	}
+	err := sessions.New(resp, req, sqlPasswd)
+	if err != nil {
+		log.Errorln(err)
+	} else {
+		return true
+	}
+	switch err.Error() {
+	case "SESSION_EXISTS":
+	case "":
+	default:
+		return false
 	}
 	return true
 }
@@ -282,10 +295,6 @@ func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) 
 
 //upload is the func to take the users file  and upload it.
 func upload(resp http.ResponseWriter, req *http.Request, config config) /*(string, error)*/ {
-	inputKey := req.FormValue("fn")
-
-	fmt.Println("got into the func")
-
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
 	re := recaptcha.R{
 		Secret: config.recaptchaPrivKey,
@@ -308,7 +317,9 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		log.Traceln("recieved a valid captcha response!")
 	}
 
-	if checkKey(inputKey) == true {
+	inputKey := req.FormValue("fn")
+
+	if checkKey(resp, req, inputKey, config.sqlPasswd) == true {
 		log.Debugln("Key success!\n")
 
 	} else {
@@ -469,6 +480,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 	}
 	var filename string
 	err = db.QueryRow("SELECT filename FROM files WHERE hash=?", img).Scan(&filename)
+
 	switch {
 	case err == sql.ErrNoRows:
 		log.Errorln("File not in db..")
@@ -500,9 +512,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 	log.Tracef("Heres the file size: %s", fileSize)
 
 	//Send the headers
-	//resp.Header().Set("Content-Disposition", fmt.Sprintf("filename=\"%v\"", filename))
 	resp.Header().Set("Content-Disposition", "inline;"+fmt.Sprintf("filename=\"%v\"", filename))
-	//resp.Header().Set("Content-Disposition", "attachment")
 	resp.Header().Set("Content-Type", fileContentType)
 	resp.Header().Set("Content-Length", fileSize)
 
