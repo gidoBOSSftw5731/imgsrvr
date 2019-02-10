@@ -263,15 +263,13 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlPasswd s
 	err = sessions.New(resp, req, sqlPasswd) // make new session if none found and valid key
 	if err != nil {
 		log.Errorln(err)
-	} else {
-		return false, true // session bad key good no err
-	}
-
-	switch err.Error() {
-	case "SESSION_EXISTS", "":
-	default:
-		return false, false
-	}
+		
+		switch err.Error() {
+		case "SESSION_EXISTS", "":
+		default:
+			return false, false
+		}
+	} 
 
 	return false, true // session bad key good
 }
