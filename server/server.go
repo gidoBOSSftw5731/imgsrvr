@@ -13,28 +13,37 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"sort"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
-	//raven "github.com/getsentry/raven-go"
+	//raven "github.com/getsentry/raven-go"<<<<<<< staging
+	"./sessions"
+
 	"github.com/gidoBOSSftw5731/log"
 	"github.com/haisum/recaptcha"
 )
 
+var (
+	keyFilename = "keys"
+	keys        = make(map[string]bool)
+)
+
+//tData is a struct for HTTP inputs.
 type tData struct {
 	Fn string
 	Tn string
 }
 
+//FileHeader is used for when you download a file from the client. It stores all relevant information in Header.
 type FileHeader struct {
 	Filename string
 	Header   textproto.MIMEHeader
 	// contains filtered or unexported fields
 }
 
+//files is used for implementing user-data into SQL databases... in theory..
 type files struct {
 	Hash        string
 	UploaderKey string
@@ -42,24 +51,7 @@ type files struct {
 	UploaderIP  string
 }
 
-type Manager struct {
-	cookieName  string     //private cookiename
-	lock        sync.Mutex // protects session
-	provider    Provider
-	maxlifetime int64
-}
-type Provider interface {
-	SessionInit(sid string) (Session, error)
-	SessionRead(sid string) (Session, error)
-	SessionDestroy(sid string) error
-	SessionGC(maxLifeTime int64)
-}
-type Session interface {
-	Set(key, value interface{}) error //set session value
-	Get(key interface{}) interface{}  //get session value
-	Delete(key interface{}) error     //delete session value
-	SessionID() string                //back current sessionID
-}
+//Cookie is a struct for creating data for cookies
 type Cookie struct {
 	Name       string
 	Value      string
@@ -78,17 +70,18 @@ type Cookie struct {
 	Unparsed []string // Raw text of unparsed attribute-value pairs
 }
 
+//Config is a struct for importing the config from main.go
 type config struct {
 	urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey, coinhiveCaptchaPub, coinhiveCaptchaPriv string
 	imgHash                                                                                                             int
 }
 
-// FastCGIServer is how the config constants get to the server package.
+//FastCGIServer is how the config constants get to the server package.
 type FastCGIServer struct {
 	config config
 }
 
-// NewFastcgiServer is an implomentation of fastcgi server.
+//NewFastCGIServer is an implementation of fastcgi server.
 func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey, coinhiveCaptchaPub, coinhiveCaptchaPriv string, imgHash int) *FastCGIServer {
 	return &FastCGIServer{
 		config: config{
@@ -113,12 +106,29 @@ func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey,
 <p> and </p>: margin
 */
 
-func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
+//cookieCheck is a func implemented in every Page func to handle the cookies.
+func cookieCheck(resp http.ResponseWriter, req *http.Request, config config) {
 	expiration := time.Now().Add(24 * time.Hour)
-	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
+
+	cookie := http.Cookie{
+		Name:    "ip",
+		Value:   req.RemoteAddr,
+		Expires: expiration,
+	}
+
 	prevCookie, _ := req.Cookie("ip")
+
 	log.Traceln("Last IP was: ", prevCookie)
 	http.SetCookie(resp, &cookie)
+}
+
+/*func prepareTemplate(source string) (*template.New, string, error) {
+
+}*/
+
+//todoPage is a standard func for the setup of the todo page.
+func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
+	cookieCheck(resp, req, config)
 	todoPageTemplate := template.New("first page templated.")
 	content, err := ioutil.ReadFile("server/todoPageVar.html")
 	todoPageVar := string(content)
@@ -140,13 +150,9 @@ func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
 	err = todoPageTemplate.Execute(resp, tData)
 }
 
-//First page Stuff!
+//appPage is a standard func for the setup of the main page.
 func appPage(resp http.ResponseWriter, req *http.Request, config config) {
-	expiration := time.Now().Add(24 * time.Hour)
-	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
-	prevCookie, _ := req.Cookie("ip")
-	log.Traceln("Last IP was: ", prevCookie)
-	http.SetCookie(resp, &cookie)
+	cookieCheck(resp, req, config)
 	firstPageTemplate := template.New("first page templated.")
 	content, err := ioutil.ReadFile("server/firstPage.html")
 	firstPage := string(content)
@@ -155,7 +161,8 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 		errorHandler(resp, req, 404)
 		return
 	}
-	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey, config.coinhiveCaptchaPub, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey,
+		config.coinhiveCaptchaPub, config.urlPrefix, config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -177,6 +184,7 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 }
 
+//megaMinePage is a standard func for the setup of the megamine page.
 func megaMinePage(resp http.ResponseWriter, req *http.Request, config config) {
 	megaMineTemplate := template.New("first page templated.")
 	content, err := ioutil.ReadFile("server/megaMineVar.html")
@@ -186,7 +194,8 @@ func megaMinePage(resp http.ResponseWriter, req *http.Request, config config) {
 		errorHandler(resp, req, 404)
 		return
 	}
-	megaMineTemplate, err = megaMineTemplate.Parse(fmt.Sprintf(megaMineVar, config.urlPrefix, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	megaMineTemplate, err = megaMineTemplate.Parse(fmt.Sprintf(megaMineVar, config.urlPrefix, config.urlPrefix,
+		config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -199,11 +208,7 @@ func megaMinePage(resp http.ResponseWriter, req *http.Request, config config) {
 }
 
 func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
-	expiration := time.Now().Add(24 * time.Hour)
-	cookie := http.Cookie{Name: "ip", Value: req.RemoteAddr, Expires: expiration}
-	prevCookie, _ := req.Cookie("ip")
-	log.Traceln("Last IP was: ", prevCookie)
-	http.SetCookie(resp, &cookie)
+	cookieCheck(resp, req, config)
 	minePageTemplate := template.New("first page templated.")
 	content, err := ioutil.ReadFile("server/minePageVar.html")
 	minePageVar := string(content)
@@ -212,7 +217,8 @@ func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
 		errorHandler(resp, req, 404)
 		return
 	}
-	minePageTemplate, err = minePageTemplate.Parse(fmt.Sprintf(minePageVar, config.urlPrefix, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	minePageTemplate, err = minePageTemplate.Parse(fmt.Sprintf(minePageVar, config.urlPrefix, config.urlPrefix,
+		config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -224,30 +230,51 @@ func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
 	err = minePageTemplate.Execute(resp, tData)
 }
 
-func checkKey(resp http.ResponseWriter, req *http.Request, inputKey string) bool {
-	workingDir, err := os.Getwd()
-	keyFile := workingDir + "/keys"
-	content, err := ioutil.ReadFile(keyFile)
+// readKeys reads a key file from disk, returning a map to use in verification.
+func readKeys(kf string) error {
+	// Read the key content from the full file path.
+	content, err := ioutil.ReadFile(kf)
 	if err != nil {
 		log.Errorln(err)
-		return false
+		return err
 	}
-	keySplit := strings.Split(string(content), ",")
-	if string(content) == "" {
-		errorHandler(resp, req, 404)
-		return false
+
+	// Fill the map with keys seen.
+	for _, key := range strings.Split(string(content), ",") {
+		keys[key] = true
 	}
-	if len(keySplit) == 0 {
-		log.Fatal("NO KEYS")
-	}
-	sort.Strings(keySplit)
-	n := sort.SearchStrings(keySplit, inputKey)
-	if n < len(keySplit) && keySplit[n] == inputKey {
-		return true
-	}
-	return false // last call if all else fails
+	return nil
 }
 
+// checkKey simply looks in the keys map for evidence of a key.
+func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlPasswd string) (bool, bool) { // session good, key good
+	ok, err := sessions.Verify(resp, req, sqlPasswd) // good session
+	if ok {
+		return false, true
+	}
+	if err != nil {
+		log.Errorln(err)
+	}
+
+	if _, ok = keys[inputKey]; !ok { // key not good
+		return false, false
+	}
+
+	err = sessions.New(resp, req, sqlPasswd) // make new session if none found and valid key
+	if err != nil {
+		log.Errorln(err)
+		
+		switch err.Error() {
+		case "SESSION_EXISTS", "":
+		default:
+			return false, false
+		}
+	} 
+
+	return false, true // session bad key good
+}
+
+//verifyCCaptcha is a func to check the validity of the response from the coinhive captcha
 func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) (string, error) {
 	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
 
@@ -260,7 +287,7 @@ func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) 
 
 	/*w, err := http.DefaultClient.Do(r)
 	if err != nil {
-		return "", fmt.Errorf("Error while making captcha request: %v", err)
+		return "", fmt.Errorf("Error     while making captcha request: %v", err)
 	}*/
 	defer w.Body.Close()
 
@@ -275,35 +302,43 @@ func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) 
 	return string(wBody), nil
 }
 
+//upload is the func to take the users file  and upload it.
 func upload(resp http.ResponseWriter, req *http.Request, config config) /*(string, error)*/ {
-	inputKey := req.FormValue("fn")
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
-	re := recaptcha.R{
-		Secret: config.recaptchaPrivKey,
-	}
-	coinhiveResp, err := verifyCCaptcha(resp, req, config)
-	if err != nil {
-		//File not found, send 404
-		errorHandler(resp, req, 404)
-		log.Errorf("ERROR: %s", err)
-		return
-	}
-	log.Tracef("Coinhive's response: %v\n", coinhiveResp)
-	isValid2 := strings.HasPrefix(coinhiveResp, `{"success":true,"created":`)
-	isValid := re.Verify(*req)
-	if !isValid && !isValid2 {
-		fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
-		fmt.Printf("Invalid Captcha! These errors ocurred: %v", re.LastError())
-		return
-	}
 
-	if checkKey(resp, req, inputKey) == true {
+	inputKey := req.FormValue("fn")
+
+	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlPasswd)
+
+	if sessionGood || keyGood {
 		log.Debugln("Key success!\n")
-
 	} else {
 		log.Errorln("Invalid/no key")
 		fmt.Fprintln(resp, "Invalid/No key!!!")
 		return
+	}
+
+	if !sessionGood {
+		re := recaptcha.R{
+			Secret: config.recaptchaPrivKey,
+		}
+		coinhiveResp, err := verifyCCaptcha(resp, req, config)
+		if err != nil {
+			//File not found, send 404
+			errorHandler(resp, req, 404)
+			log.Errorf("ERROR: %s", err)
+			return
+		}
+		log.Tracef("Coinhive's response: %v\n", coinhiveResp)
+		isValid2 := strings.HasPrefix(coinhiveResp, `{"success":true,"created":`) // coinhive
+		isValid := re.Verify(*req)                                                // recaptcha
+		if !isValid && !isValid2 {
+			fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
+			fmt.Printf("Invalid Captcha! These errors ocurred: %v", re.LastError())
+			return
+		} else {
+			log.Traceln("recieved a valid captcha response!")
+		}
 	}
 	if req.Method == "GET" {
 		/*fmt.Println("Yo, its GET for the upload, btw")
@@ -333,7 +368,13 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		log.Debug("Oi, mysql did thing")
 		defer db.Close()
 		// end of SQL opening
-		req.ParseMultipartForm(2048 << 20)
+
+		err = req.ParseMultipartForm(107374182400) // max upload in... bytes..?
+		if err != nil {
+			errorHandler(resp, req, http.StatusBadRequest)
+			log.Errorf("File too Big! err = %v", err)
+			return
+		}
 		req.ParseForm()
 		//img := req.FormFile("img")
 		log.Trace("Yo, its POST for the upload, btw")
@@ -343,7 +384,6 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		switch err {
 		case nil:
 		case http.ErrMissingFile:
-			//raven.CaptureErrorAndWait(err, nil)
 			log.Error("NO FILE")
 			fmt.Fprintln(resp, "NO FILE")
 			return
@@ -362,7 +402,6 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 			return
 		}
 		if written == 0 {
-			//raven.CaptureErrorAndWait(err, nil)
 			log.Error("No md5 written, error!: ", written)
 			return
 		}
@@ -375,18 +414,18 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		log.Trace("I just hashed md5! Here it is:", encodedMd5)
 		firstChar := string(encodedMd5[0])
 		secondChar := string(encodedMd5[1])
-		log.Trace("FileName: \n", handler.Filename)
+		log.Tracef("FileName: %v\n", handler.Filename)
 		var sqlFilename string
 		err = db.QueryRow("SELECT filename FROM files WHERE hash=?", encodedMd5).Scan(&sqlFilename)
 		switch {
 		case err == sql.ErrNoRows:
 			log.Debug("New file, adding..")
-			insert, err := db.Query("INSERT INTO files VALUES(?, ?, ?, ?)", encodedMd5, inputKey, handler.Filename, req.RemoteAddr)
+			_, err := db.Exec("INSERT INTO files VALUES(?, ?, ?, ?)", encodedMd5, inputKey, handler.Filename, req.RemoteAddr) // the _ var used to be `insert` but was removed due to an issue
 			if err != nil {
 				log.Error(err)
 				return
 			}
-			defer insert.Close()
+			//defer insert.Close()
 			log.Debug("Added fiel info to table")
 			sqlFilename = handler.Filename
 		case err != nil:
@@ -455,6 +494,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 	}
 	var filename string
 	err = db.QueryRow("SELECT filename FROM files WHERE hash=?", img).Scan(&filename)
+
 	switch {
 	case err == sql.ErrNoRows:
 		log.Errorln("File not in db..")
@@ -486,7 +526,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 	log.Tracef("Heres the file size: %s", fileSize)
 
 	//Send the headers
-	//resp.Header().Set("Content-Disposition", "attachment; filename="+Filename)
+	resp.Header().Set("Content-Disposition", "inline;"+fmt.Sprintf("filename=\"%v\"", filename))
 	resp.Header().Set("Content-Type", fileContentType)
 	resp.Header().Set("Content-Length", fileSize)
 	//resp.AppendHeader("content-disposition", "attachment; filename=\"" + filename +"\"");
@@ -514,6 +554,16 @@ func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
 }
 
 func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	// Find and read the keys file into the keys map.
+	workingDir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("failed to read cwd: %v", err)
+	}
+	kf := filepath.Join(workingDir, keyFilename)
+	err = readKeys(kf)
+	if err != nil {
+		log.Fatalf("failed to read keyfile(%v) from disk: %v", keyFilename, err)
+	}
 
 	log.Debug("the req arrived")
 	if req.Body == nil {
@@ -591,11 +641,28 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		http.ServeFile(resp, req, "favicons/"+urlSplit[switchLen])
 	case "robots.txt":
 		http.ServeFile(resp, req, "robots.txt")
+
+	case "css":
+		http.ServeFile(resp, req, "server/"+urlSplit[switchLen+1])
+	case "js":
+		i := switchLen + 2
+		if i >= len(urlSplit)+1 {
+			errorHandler(resp, req, 404)
+			return
+		}
+		buf := "/"
+		for i <= len(urlSplit) {
+			buf += urlSplit[i-1]
+			i++
+		}
+		http.ServeFile(resp, req, path.Join("js/", buf))
+
 	case "minePageVar.css", "firstPage.css", "todoPageVar.css":
 		http.ServeFile(resp, req, "server/"+urlSplit[switchLen])
 	case "github", "git":
 		github := "https://github.com/gidoBOSSftw5731"
 		http.Redirect(resp, req, github, http.StatusSeeOther)
+
 	case "":
 		//raven.RecoveryHandler(appPage(resp, req, s.config))
 		appPage(resp, req, s.config)
@@ -605,6 +672,3 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 }
 
-func init() {
-	//raven.SetDSN("https://4615e9d023e94af09b5103526a1423be:4387a2c5c00344299eb4a879f6688736@sentry.io/1252705")
-}

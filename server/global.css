@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css?family=Ubuntu');
+
+body {
+    background-color: #101010;
+    font-family: 'Ubuntu', "Comic Sans MS", sans-serif;
+}
+
+a {
+    text-decoration: none;
+}
+
+#container {
+    background-color: #243447;
+    width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    font-family: 'Ubuntu', "Comic Sans MS", sans-serif;
+}
+
+#footer a:link, #footer a:visited {
+    text-decoration: none;
+    background-color: black;
+    color: lightgrey;
+    padding: 14px 25px;
+    display: inline-block;
+}
+
+#footer a:hover {
+    background-color: aquamarine;
+    color: black;
+}
+
+#footer a:active {
+    background-color: magenta;
+}
+
+#header {
+    background-color: #141d26;
+    color: lightgray;
+    text-align: center;
+    padding: 10px
+    padding-top;
+}
+#footer {
+    background-color: #141d26;
+    padding: 28px 50px;
+}
