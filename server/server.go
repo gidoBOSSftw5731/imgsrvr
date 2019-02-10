@@ -246,23 +246,33 @@ func readKeys(kf string) error {
 }
 
 // checkKey simply looks in the keys map for evidence of a key.
-func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlPasswd string) bool {
-	if _, ok := keys[inputKey]; !ok {
-		return false // last call if all else fails
+func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlPasswd string) (bool, bool) { // session good, key good
+	ok, err := sessions.Verify(resp, req, sqlPasswd) // good session
+	if ok {
+		return false, true
 	}
-	err := sessions.New(resp, req, sqlPasswd)
+	if err != nil {
+		log.Errorln(err)
+	}
+
+	if _, ok = keys[inputKey]; !ok { // key not good
+		return false, false
+	}
+
+	err = sessions.New(resp, req, sqlPasswd) // make new session if none found and valid key
 	if err != nil {
 		log.Errorln(err)
 	} else {
-		return true
+		return false, true // session bad key good no err
 	}
+
 	switch err.Error() {
-	case "SESSION_EXISTS":
-	case "":
+	case "SESSION_EXISTS", "":
 	default:
-		return false
+		return false, false
 	}
-	return true
+
+	return false, true // session bad key good
 }
 
 //verifyCCaptcha is a func to check the validity of the response from the coinhive captcha
@@ -296,36 +306,40 @@ func verifyCCaptcha(resp http.ResponseWriter, req *http.Request, config config) 
 //upload is the func to take the users file  and upload it.
 func upload(resp http.ResponseWriter, req *http.Request, config config) /*(string, error)*/ {
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
-	re := recaptcha.R{
-		Secret: config.recaptchaPrivKey,
-	}
-	coinhiveResp, err := verifyCCaptcha(resp, req, config)
-	if err != nil {
-		//File not found, send 404
-		errorHandler(resp, req, 404)
-		log.Errorf("ERROR: %s", err)
-		return
-	}
-	log.Tracef("Coinhive's response: %v\n", coinhiveResp)
-	isValid2 := strings.HasPrefix(coinhiveResp, `{"success":true,"created":`) // coinhive
-	isValid := re.Verify(*req)                                                // recaptcha
-	if !isValid && !isValid2 {
-		fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
-		fmt.Printf("Invalid Captcha! These errors ocurred: %v", re.LastError())
-		return
-	} else {
-		log.Traceln("recieved a valid captcha response!")
-	}
 
 	inputKey := req.FormValue("fn")
 
-	if checkKey(resp, req, inputKey, config.sqlPasswd) == true {
-		log.Debugln("Key success!\n")
+	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlPasswd)
 
+	if sessionGood || keyGood {
+		log.Debugln("Key success!\n")
 	} else {
 		log.Errorln("Invalid/no key")
 		fmt.Fprintln(resp, "Invalid/No key!!!")
 		return
+	}
+
+	if !sessionGood {
+		re := recaptcha.R{
+			Secret: config.recaptchaPrivKey,
+		}
+		coinhiveResp, err := verifyCCaptcha(resp, req, config)
+		if err != nil {
+			//File not found, send 404
+			errorHandler(resp, req, 404)
+			log.Errorf("ERROR: %s", err)
+			return
+		}
+		log.Tracef("Coinhive's response: %v\n", coinhiveResp)
+		isValid2 := strings.HasPrefix(coinhiveResp, `{"success":true,"created":`) // coinhive
+		isValid := re.Verify(*req)                                                // recaptcha
+		if !isValid && !isValid2 {
+			fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
+			fmt.Printf("Invalid Captcha! These errors ocurred: %v", re.LastError())
+			return
+		} else {
+			log.Traceln("recieved a valid captcha response!")
+		}
 	}
 	if req.Method == "GET" {
 		/*fmt.Println("Yo, its GET for the upload, btw")
