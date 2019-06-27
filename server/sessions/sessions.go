@@ -12,6 +12,7 @@ import (
 	"github.com/gidoBOSSftw5731/log"
 )
 
+// Cookie is a struct detailing all parts of an http cookie
 type Cookie struct {
 	Name       string
 	Value      string
@@ -126,13 +127,13 @@ func Verify(resp http.ResponseWriter, req *http.Request, sqlPass string) (bool, 
 	default:
 		log.Traceln("Found a key")
 	}
-/*
-	if ip != getClientIP(req) {
-		OK = false
-		err = fmt.Errorf("MISMATCHED_IP")
-		return OK, err
+	/*
+		if ip != getClientIP(req) {
+			OK = false
+			err = fmt.Errorf("MISMATCHED_IP")
+			return OK, err
 
-	} */
+		} */
 
 	fmtExpr, _ := strconv.ParseInt(expr, 10, 64)
 
