@@ -15,13 +15,21 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	//raven "github.com/getsentry/raven-go"<<<<<<< staging
 	"./sessions"
 
 	"github.com/gidoBOSSftw5731/log"
 	"github.com/haisum/recaptcha"
+)
+
+const (
+	alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	cost     = 20
 )
 
 var (
@@ -181,8 +189,8 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 }
 
-// readKeys reads a key file from disk, returning a map to use in verification.
-func readKeys(kf string) error {
+// ReadKeys reads a key file from disk, returning a map to use in verification.
+func ReadKeys(kf string) error {
 	// Read the key content from the full file path.
 	content, err := ioutil.ReadFile(kf)
 	if err != nil {
@@ -195,6 +203,29 @@ func readKeys(kf string) error {
 		keys[key] = true
 	}
 	return nil
+}
+
+func checkHash(key, salt, origHash string) (bool, error) {
+
+	var wg sync.WaitGroup
+	wg.Add(len(alphabet))
+	var ok bool
+	var err error
+	for _, c := range alphabet {
+		go func(c string) {
+			defer wg.Done()
+			h, err := bcrypt.GenerateFromPassword([]byte(string(c+key+salt)), cost)
+			if err == nil {
+				if string(h) == (origHash) {
+					ok = true
+				}
+			}
+		}(string(c))
+	}
+
+	wg.Wait()
+
+	return ok, err
 }
 
 // checkKey simply looks in the keys map for evidence of a key.
@@ -456,7 +487,7 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		log.Fatalf("failed to read cwd: %v", err)
 	}
 	kf := filepath.Join(workingDir, keyFilename)
-	err = readKeys(kf)
+	err = ReadKeys(kf)
 	if err != nil {
 		log.Fatalf("failed to read keyfile(%v) from disk: %v", keyFilename, err)
 	}
