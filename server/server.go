@@ -134,7 +134,7 @@ func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
 		errorHandler(resp, req, 404)
 		return
 	}
-	todoPageTemplate, err = todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix, config.urlPrefix))
+	todoPageTemplate, err = todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		errorHandler(resp, req, 404)
@@ -159,7 +159,7 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 		return
 	}
 	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey,
-		config.urlPrefix, config.urlPrefix, config.urlPrefix))
+		config.urlPrefix, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -179,52 +179,6 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 	}
 
-}
-
-//megaMinePage is a standard func for the setup of the megamine page.
-func megaMinePage(resp http.ResponseWriter, req *http.Request, config config) {
-	megaMineTemplate := template.New("first page templated.")
-	content, err := ioutil.ReadFile("server/megaMineVar.html")
-	megaMineVar := string(content)
-	if err != nil {
-		log.Errorf("Failed to parse template: %v", err)
-		errorHandler(resp, req, 404)
-		return
-	}
-	megaMineTemplate, err = megaMineTemplate.Parse(fmt.Sprintf(megaMineVar, config.urlPrefix, config.urlPrefix,
-		config.urlPrefix, config.urlPrefix))
-	if err != nil {
-		log.Errorf("Failed to parse template: %v", err)
-		return
-	}
-	field := req.FormValue("mn")
-	tData := tData{
-		Fn: field,
-	}
-	err = megaMineTemplate.Execute(resp, tData)
-}
-
-func miningPage(resp http.ResponseWriter, req *http.Request, config config) {
-	cookieCheck(resp, req, config)
-	minePageTemplate := template.New("first page templated.")
-	content, err := ioutil.ReadFile("server/minePageVar.html")
-	minePageVar := string(content)
-	if err != nil {
-		log.Errorf("Failed to parse template: %v", err)
-		errorHandler(resp, req, 404)
-		return
-	}
-	minePageTemplate, err = minePageTemplate.Parse(fmt.Sprintf(minePageVar, config.urlPrefix, config.urlPrefix,
-		config.urlPrefix, config.urlPrefix))
-	if err != nil {
-		log.Errorf("Failed to parse template: %v", err)
-		return
-	}
-	field := req.FormValue("mn")
-	tData := tData{
-		Fn: field,
-	}
-	err = minePageTemplate.Execute(resp, tData)
 }
 
 // readKeys reads a key file from disk, returning a map to use in verification.
@@ -290,7 +244,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 	if !sessionGood {
 		re := recaptcha.R{
 			Secret: config.recaptchaPrivKey,
-		}																																																								
+		}
 		isValid := re.Verify(*req) // recaptcha
 		if !isValid {
 			fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
@@ -300,26 +254,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 			log.Traceln("recieved a valid captcha response!")
 		}
 	}
-	if req.Method == "GET" {
-		/*fmt.Println("Yo, its GET for the upload, btw")
-		crutime := time.Now().Unix()
-		fmt.Println("Beep Beep Beep... The time is:", crutime)
-		md5 := md5.New()
-		io.WriteString(md5, strconv.FormatInt(crutime, 10))
-		bytemd5 := []byte("md5")
-		encodedMd5 := hex.EncodeToString(bytemd5)
-		fmt.Println("I just got the hashed md5! Here it is:", encodedMd5, "\nEnd of md5sum")
-		//fmt.Printf("MD5:", md5)
-		token := fmt.Sprintf("%x", md5.Sum(nil))
-		t, _ := template.ParseFiles("upload.gtpl")
-		t.Execute(resp, token)
-		fileURL := baseURL + urlPrefix + "i/" + encodedMd5
-		http.Redirect(resp, req, fileURL, 301)
-		return*/
-		fmt.Fprintln(resp, "GET IS NOT SUPPORTED") /* Im too lazy to add GET support
-		and it will never occur, its just a dying branch of code*/
-		return
-	} else {
+	if req.Method == "POST" {
 		db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", config.sqlPasswd))
 		if err != nil {
 			log.Error("Oh noez, could not connect to database")
@@ -413,9 +348,10 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		log.Infof("Saved file at %v!", crutime)
 		fileURL := config.baseURL + config.urlPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
-		return
+	} else {
+		fmt.Fprintln(resp, "POST requests only")
 	}
-
+	return
 	//return encodedMd5, err
 }
 
@@ -584,10 +520,6 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		log.Tracef("Split for image: %v\n", urlSplit)
 		sendImg(resp, req, urlSplit[i1], s.config)
 		//upload(resp, req)
-	case "miner":
-		miningPage(resp, req, s.config)
-	case "megamine":
-		megaMinePage(resp, req, s.config)
 	case "upload":
 		log.Traceln("Upload selected")
 		upload(resp, req, s.config)
