@@ -290,7 +290,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 	if !sessionGood {
 		re := recaptcha.R{
 			Secret: config.recaptchaPrivKey,
-		}
+		}																																																								
 		isValid := re.Verify(*req) // recaptcha
 		if !isValid {
 			fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
