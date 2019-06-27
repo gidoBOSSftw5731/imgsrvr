@@ -201,7 +201,7 @@ func readKeys(kf string) error {
 func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlPasswd string) (bool, bool) { // session good, key good
 	ok, err := sessions.Verify(resp, req, sqlPasswd) // good session
 	if ok {
-		return false, true
+		return true, true
 	}
 	if err != nil {
 		log.Errorln(err)
