@@ -15,6 +15,4 @@ const (
 	recaptchaPrivKey    = "google captcha priv key"
 	recaptchaPubKey     = "google captcha pub key"
 	loggingLevel        = 2 // 0 is panics only, 1 is errors, 2 is info, 3 is debug, 4 is trace
-	coinhiveCaptchaPub  = ""
-	coinhiveCaptchaPriv = ""
 )

@@ -86,7 +86,7 @@ func main() {
 	fmt.Println("Starting the program.")
 	listener, _ := net.Listen("tcp", "127.0.0.1:9001")
 	fmt.Println("Started the listener.")
-	srv := server.NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey, coinhiveCaptchaPub, coinhiveCaptchaPriv, imgHash)
+	srv := server.NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey, imgHash)
 	fmt.Println("Starting the fcgi.")
 
 	// I reccomend blocking 3306 in your firewall unless you use the port elsewhere

@@ -126,13 +126,13 @@ func Verify(resp http.ResponseWriter, req *http.Request, sqlPass string) (bool, 
 	default:
 		log.Traceln("Found a key")
 	}
-
+/*
 	if ip != getClientIP(req) {
 		OK = false
 		err = fmt.Errorf("MISMATCHED_IP")
 		return OK, err
 
-	}
+	} */
 
 	fmtExpr, _ := strconv.ParseInt(expr, 10, 64)
 
