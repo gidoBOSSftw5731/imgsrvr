@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	hasholdkeys "./scripts/HashOldKeys"
 	"./server"
 
 	"github.com/gidoBOSSftw5731/log"
@@ -78,9 +80,25 @@ func logger() error {
 	return nil
 }
 
+func isFlagPassed() {
+	legacykeys := flag.String("fixkeys", "", "correct legacy key system")
+	fmt.Println(legacykeys)
+	flag.Parse()
+
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "fixkeys" {
+			found = true
+			hasholdkeys.Run(sqlPasswd)
+			os.Exit(0)
+		}
+	})
+
+}
+
 //When everything gets set up, all page setup above this
 func main() {
-
+	isFlagPassed()
 	go createImgDir(imgStore)
 
 	fmt.Println("Starting the program.")
