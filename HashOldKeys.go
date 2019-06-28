@@ -19,4 +19,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to read keyfile(%v) from disk: %v", keyFilename, err)
 	}
+	
 }
