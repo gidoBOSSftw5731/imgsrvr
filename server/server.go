@@ -29,7 +29,7 @@ import (
 
 const (
 	alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	cost     = 20
+	cost     = 15
 )
 
 var (

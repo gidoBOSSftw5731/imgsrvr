@@ -22,7 +22,7 @@ var (
 
 const (
 	alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	cost     = 20
+	cost     = 15
 )
 
 func randInt() int64 {
@@ -107,13 +107,18 @@ func Run(sqlPass string) {
 	for i := range keys {
 		saltByte, _ := GenerateRandomBytes(40)
 		salt := base64.URLEncoding.EncodeToString(saltByte)[:40]
-
 		hash, err := bcrypt.GenerateFromPassword([]byte(string(string(alphabet[randInt()])+i+salt)), cost)
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Printf("user %v, key %v, salt: %v\n", n, string(hash), salt)
+		exposed := 2
+		pass := i[0:exposed]
+		for x := exposed; x < len(i); x++ {
+			pass = pass + "*"
+		}
+
+		fmt.Printf("user %v, key %v salt: %v original:%v\n", n, string(hash), salt, pass)
 		n++
 	}
 }
