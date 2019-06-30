@@ -105,6 +105,10 @@ func Run(sqlPass string) {
 
 	n := 0
 	for i := range keys {
+		if i == "" { // avoid empty keys
+			continue
+		}
+
 		saltByte, _ := GenerateRandomBytes(40)
 		salt := base64.URLEncoding.EncodeToString(saltByte)[:40]
 		hash, err := bcrypt.GenerateFromPassword([]byte(string(string(alphabet[randInt()])+i+salt)), cost)
@@ -119,6 +123,8 @@ func Run(sqlPass string) {
 		}
 
 		fmt.Printf("user %v, key %v salt: %v original:%v\n", n, string(hash), salt, pass)
+		db.Exec("INSERT INTO users ?, ?, ?", string(hash), salt, n)
 		n++
 	}
+
 }

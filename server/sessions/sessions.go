@@ -145,5 +145,5 @@ func Verify(resp http.ResponseWriter, req *http.Request, sqlPass string) (bool, 
 		return false, fmt.Errorf("EXPIRED")
 	}
 
-	return OK, nil
+	return OK, err
 }
