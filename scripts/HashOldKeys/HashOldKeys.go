@@ -70,18 +70,26 @@ func startSQL(sqlPass string) *sql.DB {
 
 // Run is a function to hash legacy keys.
 func Run(sqlPass string) {
+	fmt.Println("starting to fix keys")
+
+	log.EnableLevel("fatal")
+	log.EnableLevel("error")
+	log.EnableLevel("info")
+	log.EnableLevel("debug")
+	log.EnableLevel("trace")
+
 	db := startSQL(sqlPass)
 	defer db.Close()
 
 	workingDir, err := os.Getwd()
 	if err != nil {
-		fmt.Printf("failed to read cwd: %v", err)
+		log.Errorf("failed to read cwd: %v", err)
 	}
 
 	kf := filepath.Join(workingDir, "keys")
 	err = server.ReadKeys(kf)
 	if err != nil {
-		fmt.Printf("failed to read keyfile(%v) from disk: %v", "keys", err)
+		log.Errorf("failed to read keyfile(%v) from disk: %v", "keys", err)
 	}
 
 	content, err := ioutil.ReadFile(kf)

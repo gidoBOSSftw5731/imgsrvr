@@ -82,13 +82,14 @@ func logger() error {
 
 func isFlagPassed() {
 	legacykeys := flag.String("fixkeys", "", "correct legacy key system")
-	fmt.Println(legacykeys)
+	fmt.Println(*legacykeys)
 	flag.Parse()
 
 	found := false
 	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "fixkeys" {
+		if *legacykeys != "" {
 			found = true
+			fmt.Println(found)
 			hasholdkeys.Run(sqlPasswd)
 			os.Exit(0)
 		}
