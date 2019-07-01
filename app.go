@@ -90,7 +90,7 @@ func isFlagPassed() {
 		if *legacykeys != "" {
 			found = true
 			fmt.Println(found)
-			hasholdkeys.Run(sqlPasswd)
+			hasholdkeys.Run(sqlAcc)
 			os.Exit(0)
 		}
 	})
@@ -105,11 +105,11 @@ func main() {
 	fmt.Println("Starting the program.")
 	listener, _ := net.Listen("tcp", "127.0.0.1:9001")
 	fmt.Println("Started the listener.")
-	srv := server.NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey, imgHash)
+	srv := server.NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlAcc, recaptchaPrivKey, recaptchaPubKey, imgHash)
 	fmt.Println("Starting the fcgi.")
 
 	// I reccomend blocking 3306 in your firewall unless you use the port elsewhere
-	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlPasswd))
+	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlAcc))
 	if err != nil {
 		fmt.Println("Oh noez, could not connect to database")
 		return

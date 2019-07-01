@@ -56,8 +56,8 @@ func GenerateRandomString(s int) (string, error) {
 	return base64.URLEncoding.EncodeToString(b), err
 }
 
-func startSQL(sqlPass string) *sql.DB {
-	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlPass))
+func startSQL(sqlAcc string) *sql.DB {
+	db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlAcc))
 	if err != nil {
 		log.Error("Oh noez, could not connect to database")
 		log.Errorf("Error in SQL! %v", err)
@@ -69,7 +69,7 @@ func startSQL(sqlPass string) *sql.DB {
 }
 
 // Run is a function to hash legacy keys.
-func Run(sqlPass string) {
+func Run(sqlAcc string) {
 	fmt.Println("starting to fix keys")
 
 	log.EnableLevel("fatal")
@@ -78,7 +78,7 @@ func Run(sqlPass string) {
 	log.EnableLevel("debug")
 	log.EnableLevel("trace")
 
-	db := startSQL(sqlPass)
+	db := startSQL(sqlAcc)
 	defer db.Close()
 
 	workingDir, err := os.Getwd()
@@ -105,7 +105,7 @@ func Run(sqlPass string) {
 
 	n := 0
 	for i := range keys {
-		if i == "" { // avoid empty keys
+		if len(i) <= 3 { // avoid empty keys
 			continue
 		}
 
@@ -123,7 +123,10 @@ func Run(sqlPass string) {
 		}
 
 		fmt.Printf("user %v, key %v salt: %v original:%v\n", n, string(hash), salt, pass)
-		db.Exec("INSERT INTO users ?, ?, ?", string(hash), salt, n)
+		_, err = db.Exec("INSERT INTO users VALUES(?, ?, ?)", string(hash), salt, n)
+		if err != nil {
+			log.Fatalln(err)
+		}
 		n++
 	}
 
