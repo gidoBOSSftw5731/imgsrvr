@@ -109,7 +109,7 @@ func main() {
 	fmt.Println("Starting the fcgi.")
 
 	// I reccomend blocking 3306 in your firewall unless you use the port elsewhere
-	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlAcc))
+	db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlAcc))
 	if err != nil {
 		fmt.Println("Oh noez, could not connect to database")
 		return
