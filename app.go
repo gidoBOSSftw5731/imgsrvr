@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	hasholdkeys "./scripts/HashOldKeys"
 	"./server"
 
 	"github.com/gidoBOSSftw5731/log"
@@ -78,19 +80,36 @@ func logger() error {
 	return nil
 }
 
+func isFlagPassed() {
+	legacykeys := flag.String("fixkeys", "", "correct legacy key system")
+	fmt.Println(*legacykeys)
+	flag.Parse()
+
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if *legacykeys != "" {
+			found = true
+			fmt.Println(found)
+			hasholdkeys.Run(sqlAcc)
+			os.Exit(0)
+		}
+	})
+
+}
+
 //When everything gets set up, all page setup above this
 func main() {
-
+	isFlagPassed()
 	go createImgDir(imgStore)
 
 	fmt.Println("Starting the program.")
 	listener, _ := net.Listen("tcp", "127.0.0.1:9001")
 	fmt.Println("Started the listener.")
-	srv := server.NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey, imgHash)
+	srv := server.NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlAcc, recaptchaPrivKey, recaptchaPubKey, imgHash)
 	fmt.Println("Starting the fcgi.")
 
 	// I reccomend blocking 3306 in your firewall unless you use the port elsewhere
-	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlPasswd))
+	db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlAcc))
 	if err != nil {
 		fmt.Println("Oh noez, could not connect to database")
 		return

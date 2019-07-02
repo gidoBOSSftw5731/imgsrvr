@@ -12,16 +12,23 @@ import (
 	"net/textproto"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	//raven "github.com/getsentry/raven-go"<<<<<<< staging
 	"./sessions"
 
 	"github.com/gidoBOSSftw5731/log"
 	"github.com/haisum/recaptcha"
+)
+
+const (
+	alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	cost     = 15
 )
 
 var (
@@ -71,8 +78,8 @@ type Cookie struct {
 
 //Config is a struct for importing the config from main.go
 type config struct {
-	urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey string
-	imgHash                                                                    int
+	urlPrefix, imgStore, baseURL, sqlAcc, recaptchaPrivKey, recaptchaPubKey string
+	imgHash                                                                 int
 }
 
 //FastCGIServer is how the config constants get to the server package.
@@ -81,14 +88,14 @@ type FastCGIServer struct {
 }
 
 //NewFastCGIServer is an implementation of fastcgi server.
-func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlPasswd, recaptchaPrivKey, recaptchaPubKey string, imgHash int) *FastCGIServer {
+func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlAcc, recaptchaPrivKey, recaptchaPubKey string, imgHash int) *FastCGIServer {
 	return &FastCGIServer{
 		config: config{
 			urlPrefix:        urlPrefix,
 			imgHash:          imgHash,
 			imgStore:         imgStore,
 			baseURL:          baseURL,
-			sqlPasswd:        sqlPasswd,
+			sqlAcc:           sqlAcc,
 			recaptchaPrivKey: recaptchaPrivKey,
 			recaptchaPubKey:  recaptchaPubKey,
 		}}
@@ -181,8 +188,8 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 }
 
-// readKeys reads a key file from disk, returning a map to use in verification.
-func readKeys(kf string) error {
+// ReadKeys reads a key file from disk, returning a map to use in verification.
+func ReadKeys(kf string) error {
 	// Read the key content from the full file path.
 	content, err := ioutil.ReadFile(kf)
 	if err != nil {
@@ -197,9 +204,38 @@ func readKeys(kf string) error {
 	return nil
 }
 
+func checkHash(key, user string, db *sql.DB) (bool, error) {
+	var wg sync.WaitGroup
+	wg.Add(len(alphabet))
+	var ok bool
+
+	var origHash, salt string
+	err := db.QueryRow("SELECT hash, salt FROM users WHERE user=?", user).Scan(&origHash, &salt)
+	if err != nil {
+		log.Errorln(err)
+		return ok, err
+	}
+
+	for _, c := range alphabet {
+		go func(c string) {
+			defer wg.Done()
+			//h, err := bcrypt.GenerateFromPassword([]byte(string(c+key+salt)), cost)
+			err = bcrypt.CompareHashAndPassword([]byte(origHash), []byte(string(c+key+salt)))
+			//log.Traceln(string(h), string(origHash))
+			if err == nil {
+				ok = true
+			}
+		}(string(c))
+	}
+
+	wg.Wait()
+
+	return ok, err
+}
+
 // checkKey simply looks in the keys map for evidence of a key.
-func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlPasswd string) (bool, bool) { // session good, key good
-	ok, err := sessions.Verify(resp, req, sqlPasswd) // good session
+func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc, user string) (bool, bool) { // session good, key good
+	ok, err := sessions.Verify(resp, req, sqlAcc) // good session
 	if ok {
 		return true, true
 	}
@@ -207,11 +243,20 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlPasswd s
 		log.Errorln(err)
 	}
 
-	if _, ok = keys[inputKey]; !ok { // key not good
+	db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlAcc))
+	if err != nil {
+		log.Errorln("Oh noez, could not connect to database")
+		return false, false
+	}
+	log.Traceln("Oi, mysql did thing")
+
+	keyOK, err := checkHash(inputKey, user, db)
+
+	if !keyOK { // key not good
 		return false, false
 	}
 
-	err = sessions.New(resp, req, sqlPasswd) // make new session if none found and valid key
+	err = sessions.New(resp, req, sqlAcc) // make new session if none found and valid key
 	if err != nil {
 		log.Errorln(err)
 
@@ -230,8 +275,9 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
 
 	inputKey := req.FormValue("fn")
+	user := req.FormValue("user")
 
-	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlPasswd)
+	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlAcc, user)
 
 	if sessionGood || keyGood {
 		log.Debugln("Key success!\n")
@@ -255,7 +301,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		}
 	}
 	if req.Method == "POST" {
-		db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", config.sqlPasswd))
+		db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", config.sqlAcc))
 		if err != nil {
 			log.Error("Oh noez, could not connect to database")
 			return
@@ -357,7 +403,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 
 // Page for sending pics
 func sendImg(resp http.ResponseWriter, req *http.Request, img string, config config) {
-	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", config.sqlPasswd))
+	db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", config.sqlAcc))
 	if err != nil {
 		log.Errorln("Oh noez, could not connect to database")
 		return
@@ -450,17 +496,6 @@ func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
 }
 
 func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	// Find and read the keys file into the keys map.
-	workingDir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("failed to read cwd: %v", err)
-	}
-	kf := filepath.Join(workingDir, keyFilename)
-	err = readKeys(kf)
-	if err != nil {
-		log.Fatalf("failed to read keyfile(%v) from disk: %v", keyFilename, err)
-	}
-
 	log.Debug("the req arrived")
 	if req.Body == nil {
 		return

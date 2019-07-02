@@ -6,11 +6,11 @@
     text-align: center;
 }
 
-form input[type=password] {
+form input[type=password] input[type=text] {
     background-color: lightgrey;
     color: lightslategray;
     padding: 5px;
-    width: 30%
+    width: 30%;
 }
 
 form #upload {
