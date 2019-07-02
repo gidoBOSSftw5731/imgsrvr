@@ -188,6 +188,78 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 }
 
+func signIn(resp http.ResponseWriter, req *http.Request, config config) {
+	cookieCheck(resp, req, config)
+	pageTemplate := template.New("signin page templated.")
+	content, err := ioutil.ReadFile("server/signin.html")
+	page := string(content)
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		errorHandler(resp, req, 404)
+		return
+	}
+	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.urlPrefix, config.recaptchaPubKey, config.urlPrefix, config.urlPrefix))
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		return
+	}
+	req.ParseForm()
+	field := req.FormValue("fn")
+	//fmt.Println(field)
+	tData := tData{
+		Fn: field,
+	}
+	//upload(resp, req)
+	//log.Traceln("Form data: ", field, "\ntData: ", tData)
+	err = pageTemplate.Execute(resp, tData)
+	if err != nil {
+		log.Errorf("template execute error: %v", err)
+		return
+
+	}
+}
+
+func checkCaptcha(req *http.Request, priv string) (bool, error) {
+	var err error
+
+	re := recaptcha.R{
+		Secret: priv,
+	}
+	isValid := re.Verify(*req) // recaptcha
+	if !isValid {
+		//fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
+		err = fmt.Errorf("Invalid Captcha! These errors ocurred: %v", re.LastError())
+	} else {
+		log.Traceln("recieved a valid captcha response!")
+	}
+
+	return isValid, err
+}
+
+func loginHandler(resp http.ResponseWriter, req *http.Request, config config) {
+	log.Traceln("logging someone in!")
+
+	captcha, err := checkCaptcha(req, config.recaptchaPrivKey)
+	if err != nil || !captcha {
+		if err != nil {
+			errorHandler(resp, req, 429)
+			log.Errorf("Wrong Captcha = %v", err)
+			return
+		}
+	}
+
+	fmt.Println(req.FormValue("fn"), req.FormValue("user"))
+
+	_, ok := checkKey(resp, req, req.FormValue("fn"), config.sqlAcc, req.FormValue("user"))
+	if ok {
+		http.Redirect(resp, req, config.baseURL+"/", 302)
+	} else {
+		http.Redirect(resp, req, config.baseURL+"/login"+"?issue=BadUserPass", 302)
+		return
+	}
+
+}
+
 // ReadKeys reads a key file from disk, returning a map to use in verification.
 func ReadKeys(kf string) error {
 	// Read the key content from the full file path.
@@ -274,6 +346,15 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc, use
 func upload(resp http.ResponseWriter, req *http.Request, config config) /*(string, error)*/ {
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
 
+	captcha, err := checkCaptcha(req, config.recaptchaPrivKey)
+	if err != nil || !captcha {
+		if err != nil {
+			errorHandler(resp, req, 429)
+			log.Errorf("Wrong Captcha = %v", err)
+			return
+		}
+	}
+
 	inputKey := req.FormValue("fn")
 	user := req.FormValue("user")
 
@@ -288,17 +369,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 	}
 
 	if !sessionGood {
-		re := recaptcha.R{
-			Secret: config.recaptchaPrivKey,
-		}
-		isValid := re.Verify(*req) // recaptcha
-		if !isValid {
-			fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
-			fmt.Printf("Invalid Captcha! These errors ocurred: %v", re.LastError())
-			return
-		} else {
-			log.Traceln("recieved a valid captcha response!")
-		}
+
 	}
 	if req.Method == "POST" {
 		db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", config.sqlAcc))
@@ -589,7 +660,10 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	case "github", "git":
 		github := "https://github.com/gidoBOSSftw5731"
 		http.Redirect(resp, req, github, http.StatusSeeOther)
-
+	case "signin", "login":
+		signIn(resp, req, s.config)
+	case "loginhandler":
+		loginHandler(resp, req, s.config)
 	case "":
 		//raven.RecoveryHandler(appPage(resp, req, s.config))
 		appPage(resp, req, s.config)
