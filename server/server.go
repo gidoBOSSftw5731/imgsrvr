@@ -248,8 +248,7 @@ func loginHandler(resp http.ResponseWriter, req *http.Request, config config) {
 		}
 	}
 
-	fmt.Println(req.FormValue("fn"), req.FormValue("user"))
-
+	req.ParseForm()
 	_, ok := checkKey(resp, req, req.FormValue("fn"), config.sqlAcc, req.FormValue("user"))
 	if ok {
 		http.Redirect(resp, req, config.baseURL+"/", 302)
