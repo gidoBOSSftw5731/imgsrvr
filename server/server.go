@@ -87,6 +87,12 @@ type FastCGIServer struct {
 	config config
 }
 
+type hashable struct {
+	key, salt, pepper, origHash string
+	ok                          bool
+	wg                          *sync.WaitGroup
+}
+
 //NewFastCGIServer is an implementation of fastcgi server.
 func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlAcc, recaptchaPrivKey, recaptchaPubKey string, imgHash int) *FastCGIServer {
 	return &FastCGIServer{
@@ -275,11 +281,26 @@ func ReadKeys(kf string) error {
 	return nil
 }
 
+func chkHash(inout chan *hashable) {
+	obj := <-inout
+	fmt.Println(obj.pepper)
+
+	err := bcrypt.CompareHashAndPassword([]byte(obj.origHash), []byte(string(obj.pepper+obj.key+obj.salt)))
+	//log.Traceln(string(h), string(origHash))
+
+	if err == nil {
+		obj.ok = true
+	}
+
+	obj.wg.Done()
+
+	inout <- obj
+}
+
 func checkHash(key, user string, db *sql.DB) (bool, error) {
-	var wg sync.WaitGroup
-	wg.Add(len(alphabet))
 	var ok bool
 
+	fmt.Println(user)
 	var origHash, salt string
 	err := db.QueryRow("SELECT hash, salt FROM users WHERE user=?", user).Scan(&origHash, &salt)
 	if err != nil {
@@ -287,19 +308,19 @@ func checkHash(key, user string, db *sql.DB) (bool, error) {
 		return ok, err
 	}
 
-	for _, c := range alphabet {
-		go func(c string) {
-			defer wg.Done()
-			//h, err := bcrypt.GenerateFromPassword([]byte(string(c+key+salt)), cost)
-			err = bcrypt.CompareHashAndPassword([]byte(origHash), []byte(string(c+key+salt)))
-			//log.Traceln(string(h), string(origHash))
-			if err == nil {
-				ok = true
-			}
-		}(string(c))
+	c := make(chan *hashable)
+	go chkHash(c)
+	for _, x := range alphabet {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		var inout = hashable{key, salt, string(x), origHash, false, &wg}
+		c <- &inout
+		result := <-c
+		if result.ok {
+			ok = true
+		}
+		wg.Wait()
 	}
-
-	wg.Wait()
 
 	return ok, err
 }
@@ -354,6 +375,13 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		}
 	}
 
+	err = req.ParseMultipartForm(107374182400) // max upload in... bytes..?
+	if err != nil {
+		errorHandler(resp, req, http.StatusBadRequest)
+		log.Errorf("File too Big! err = %v", err)
+		return
+	}					
+
 	inputKey := req.FormValue("fn")
 	user := req.FormValue("user")
 
@@ -362,7 +390,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 	if sessionGood || keyGood {
 		log.Debugln("Key success!\n")
 	} else {
-		log.Errorln("Invalid/no key")
+		log.Errorln("Invalid/no key")																																																																																																																																																																																																																																																																																	
 		fmt.Fprintln(resp, "Invalid/No key!!!")
 		return
 	}
@@ -380,12 +408,6 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		defer db.Close()
 		// end of SQL opening
 
-		err = req.ParseMultipartForm(107374182400) // max upload in... bytes..?
-		if err != nil {
-			errorHandler(resp, req, http.StatusBadRequest)
-			log.Errorf("File too Big! err = %v", err)
-			return
-		}
 		req.ParseForm()
 		//img := req.FormFile("img")
 		log.Trace("Yo, its POST for the upload, btw")
@@ -426,7 +448,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		firstChar := string(encodedMd5[0])
 		secondChar := string(encodedMd5[1])
 		log.Tracef("FileName: %v\n", handler.Filename)
-		var sqlFilename string
+		var sqlFilename string																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							
 		err = db.QueryRow("SELECT filename FROM files WHERE hash=?", encodedMd5).Scan(&sqlFilename)
 		switch {
 		case err == sql.ErrNoRows:
@@ -465,8 +487,8 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		fileURL := config.baseURL + config.urlPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 	} else {
-		fmt.Fprintln(resp, "POST requests only")
-	}
+		fmt.Fprintln(resp, "POST requests only")																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																														
+	}																																																																			
 	return
 	//return encodedMd5, err
 }
@@ -559,7 +581,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 	return
 }
 
-func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
+func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {																																																																																																																																																																																																																																																						
 	resp.WriteHeader(status)
 	log.Error("artifical http error: ", status)
 	fmt.Fprint(resp, "custom ", status)
