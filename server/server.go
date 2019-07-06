@@ -239,6 +239,10 @@ func checkCaptcha(req *http.Request, priv string) (bool, error) {
 		log.Traceln("recieved a valid captcha response!")
 	}
 
+	if false {
+		isValid = true
+		err = nil
+	}
 	return isValid, err
 }
 
@@ -375,12 +379,13 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		}
 	}
 
-	err = req.ParseMultipartForm(107374182400) // max upload in... bytes..?
+	//err = req.ParseMultipartForm(107374182400) // max upload in... bytes..?
+	err = req.ParseForm()
 	if err != nil {
 		errorHandler(resp, req, http.StatusBadRequest)
 		log.Errorf("File too Big! err = %v", err)
 		return
-	}					
+	}
 
 	inputKey := req.FormValue("fn")
 	user := req.FormValue("user")
@@ -390,7 +395,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 	if sessionGood || keyGood {
 		log.Debugln("Key success!\n")
 	} else {
-		log.Errorln("Invalid/no key")																																																																																																																																																																																																																																																																																	
+		log.Errorln("Invalid/no key")
 		fmt.Fprintln(resp, "Invalid/No key!!!")
 		return
 	}
@@ -448,7 +453,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		firstChar := string(encodedMd5[0])
 		secondChar := string(encodedMd5[1])
 		log.Tracef("FileName: %v\n", handler.Filename)
-		var sqlFilename string																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							
+		var sqlFilename string
 		err = db.QueryRow("SELECT filename FROM files WHERE hash=?", encodedMd5).Scan(&sqlFilename)
 		switch {
 		case err == sql.ErrNoRows:
@@ -487,8 +492,8 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		fileURL := config.baseURL + config.urlPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 	} else {
-		fmt.Fprintln(resp, "POST requests only")																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																														
-	}																																																																			
+		fmt.Fprintln(resp, "POST requests only")
+	}
 	return
 	//return encodedMd5, err
 }
@@ -581,7 +586,7 @@ func sendImg(resp http.ResponseWriter, req *http.Request, img string, config con
 	return
 }
 
-func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {																																																																																																																																																																																																																																																						
+func errorHandler(resp http.ResponseWriter, req *http.Request, status int) {
 	resp.WriteHeader(status)
 	log.Error("artifical http error: ", status)
 	fmt.Fprint(resp, "custom ", status)
