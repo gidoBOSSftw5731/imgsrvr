@@ -87,10 +87,16 @@ type FastCGIServer struct {
 	config config
 }
 
+//hashable is a struct of all the information necessary to check a password hash
 type hashable struct {
-	key, salt, pepper, origHash string
-	ok                          bool
-	wg                          *sync.WaitGroup
+	key, salt, origHash *string
+	pepper              string
+	ok                  bool
+	wg                  *sync.WaitGroup
+}
+
+type hashes struct {
+	arr [52]hashable
 }
 
 //NewFastCGIServer is an implementation of fastcgi server.
@@ -231,6 +237,7 @@ func checkCaptcha(req *http.Request, priv string) (bool, error) {
 	re := recaptcha.R{
 		Secret: priv,
 	}
+	//req2 := req
 	isValid := re.Verify(*req) // recaptcha
 	if !isValid {
 		//fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
@@ -239,7 +246,7 @@ func checkCaptcha(req *http.Request, priv string) (bool, error) {
 		log.Traceln("recieved a valid captcha response!")
 	}
 
-	if false {
+	if false { // solely for testing, since I sometimes work offline, should be false on prod machines
 		isValid = true
 		err = nil
 	}
@@ -285,45 +292,139 @@ func ReadKeys(kf string) error {
 	return nil
 }
 
-func chkHash(inout chan *hashable) {
-	obj := <-inout
-	fmt.Println(obj.pepper)
+func chkHash(inout chan *hashes) {
+	var output hashes
+	input := <-inout
 
-	err := bcrypt.CompareHashAndPassword([]byte(obj.origHash), []byte(string(obj.pepper+obj.key+obj.salt)))
-	//log.Traceln(string(h), string(origHash))
+	var wg0 sync.WaitGroup
+	var wg1 sync.WaitGroup
+	var wg2 sync.WaitGroup
+	var wg3 sync.WaitGroup
 
-	if err == nil {
-		obj.ok = true
-	}
+	wg0.Add(len(alphabet) / 4)
+	wg1.Add(len(alphabet) / 4)
+	wg2.Add(len(alphabet) / 4)
+	wg3.Add(len(alphabet) / 4)
 
-	obj.wg.Done()
+	go func() {
+		for i := 0; i < len(alphabet)/4; i++ {
+			obj := input.arr[i]
 
-	inout <- obj
+			if obj.ok {
+				wg0.Done()
+				continue
+			}
+
+			err := bcrypt.CompareHashAndPassword([]byte(*obj.origHash), []byte(string(obj.pepper+*obj.key+*obj.salt)))
+			//log.Traceln(string(obj.pepper), string(*obj.origHash))
+
+			if err == nil {
+				obj.ok = true
+			}
+			output.arr[i] = obj
+
+			wg0.Done()
+		}
+	}()
+	go func() {
+		for i := len(alphabet) / 4; i < 2*len(alphabet)/4; i++ {
+			obj := input.arr[i]
+
+			if obj.ok {
+				wg1.Done()
+				continue
+			}
+
+			err := bcrypt.CompareHashAndPassword([]byte(*obj.origHash), []byte(string(obj.pepper+*obj.key+*obj.salt)))
+			//log.Traceln(string(obj.pepper), string(*obj.origHash))
+
+			if err == nil {
+				obj.ok = true
+			}
+			output.arr[i] = obj
+
+		}
+		wg1.Done()
+	}()
+	go func() {
+		for i := 2 * len(alphabet) / 4; i < 3*len(alphabet)/4; i++ {
+			obj := input.arr[i]
+
+			if obj.ok {
+				wg2.Done()
+				continue
+			}
+
+			err := bcrypt.CompareHashAndPassword([]byte(*obj.origHash), []byte(string(obj.pepper+*obj.key+*obj.salt)))
+			//log.Traceln(string(obj.pepper), string(*obj.origHash))
+
+			if err == nil {
+				obj.ok = true
+			}
+			output.arr[i] = obj
+
+			wg2.Done()
+		}
+	}()
+	go func() {
+		for i := 3 * len(alphabet) / 4; i < len(alphabet); i++ {
+
+			obj := input.arr[i]
+
+			if obj.ok {
+				wg3.Done()
+				continue
+			}
+
+			err := bcrypt.CompareHashAndPassword([]byte(*obj.origHash), []byte(string(obj.pepper+*obj.key+*obj.salt)))
+			//log.Traceln(string(obj.pepper), string(*obj.origHash))
+
+			if err == nil {
+				obj.ok = true
+			}
+			output.arr[i] = obj
+
+			wg3.Done()
+		}
+	}()
+
+	wg0.Wait()
+	wg1.Wait()
+	wg2.Wait()
+	wg3.Wait()
+
+	inout <- &output
 }
 
 func checkHash(key, user string, db *sql.DB) (bool, error) {
 	var ok bool
 
-	fmt.Println(user)
+	//fmt.Println(user)
 	var origHash, salt string
+	var in hashes
 	err := db.QueryRow("SELECT hash, salt FROM users WHERE user=?", user).Scan(&origHash, &salt)
 	if err != nil {
 		log.Errorln(err)
 		return ok, err
 	}
 
-	c := make(chan *hashable)
+	c := make(chan *hashes)
+	var wg sync.WaitGroup
 	go chkHash(c)
-	for _, x := range alphabet {
-		var wg sync.WaitGroup
+
+	for i, x := range alphabet {
+		in.arr[i] = hashable{&key, &salt, &origHash, string(x), false, &wg}
 		wg.Add(1)
-		var inout = hashable{key, salt, string(x), origHash, false, &wg}
-		c <- &inout
-		result := <-c
-		if result.ok {
+	}
+	c <- &in
+
+	wg.Wait()
+	output := *<-c
+	for _, arr := range output.arr {
+		if arr.ok {
 			ok = true
+			break
 		}
-		wg.Wait()
 	}
 
 	return ok, err
@@ -370,6 +471,12 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc, use
 func upload(resp http.ResponseWriter, req *http.Request, config config) /*(string, error)*/ {
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
 
+	req.ParseMultipartForm(2 ^ 64 - 1)
+	req.Header.Add("Content-Type", "multipart/form-data")
+
+	inputKey := req.FormValue("fn")
+	user := req.FormValue("user")
+
 	captcha, err := checkCaptcha(req, config.recaptchaPrivKey)
 	if err != nil || !captcha {
 		if err != nil {
@@ -380,15 +487,12 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 	}
 
 	//err = req.ParseMultipartForm(107374182400) // max upload in... bytes..?
-	err = req.ParseForm()
+	/*err = req.ParseForm()
 	if err != nil {
 		errorHandler(resp, req, http.StatusBadRequest)
 		log.Errorf("File too Big! err = %v", err)
 		return
-	}
-
-	inputKey := req.FormValue("fn")
-	user := req.FormValue("user")
+	}*/
 
 	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlAcc, user)
 
@@ -413,7 +517,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		defer db.Close()
 		// end of SQL opening
 
-		req.ParseForm()
+		//req.ParseForm()
 		//img := req.FormFile("img")
 		log.Trace("Yo, its POST for the upload, btw")
 		crutime := time.Now().Unix()
