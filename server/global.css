@@ -17,10 +17,13 @@ a {
     font-family: 'Ubuntu', "Comic Sans MS", sans-serif;
 }
 
-#footer a:link, #footer a:visited {
-    text-decoration: none;
-    background-color: black;
+a:visited {
     color: lightgrey;
+    text-decoration: none;
+}
+
+#footer a:link, #footer a:visited {
+    background-color: black;
     padding: 14px 25px;
     display: inline-block;
 }
@@ -52,18 +55,19 @@ a {
     margin-right: auto;
     padding: 10px;
     text-align: center;
+    color: lightslategrey;
 }
 
 form input[type=password] input[type=text] {
     background-color: lightgrey;
-    color: lightslategray;
+    color: lightslategrey;
     padding: 5px;
     width: 30%;
 }
 
 form #upload {
     /*background-color: lightslategray;*/
-    color: darkslategray;
+    color: lightslategrey;
     padding: 5px;
     width: 30%
 }
@@ -73,7 +77,7 @@ form #upload {
     display: inline-block;
 }
 
- #myProgress {
+#myProgress {
     width: 100%;
     background-color: grey;
 }
