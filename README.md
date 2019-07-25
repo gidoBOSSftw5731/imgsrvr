@@ -7,7 +7,7 @@ temporary git for my web/image server app thing.. yeah
 This should work on any version of go but please try latest, if latest doesnt work make a issue.
 
 
-#To configure, do something like this:
+# To configure, do something like this:
 
 1. Setup nginx to listen on port 80 for /app/ (or whatever its set to in a config) and fastcgi_pass all of it to 9001. Apache should work but has not been tested and is not reccomended, if you want to test it go ahead.
 1. git clone, edit the script/config file with your domain name and such
@@ -16,7 +16,7 @@ This should work on any version of go but please try latest, if latest doesnt wo
 1. Dont be evil.
 
 
-#How to modular
+# How to modular
 1. Fork the repo, it'll make your life easier when I update the software
 1. add your software as a go package under server/selector/modules in its OWN folder. This will allow you to copy and paste git repos. You may need to make that directory.
 1. add your software to the case statement in server/selector/seletor.go with the same format as the others
