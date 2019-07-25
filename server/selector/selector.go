@@ -86,4 +86,5 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 	default:
 		tools.ErrorHandler(obj.Resp, obj.Req, 404)
 	}
+
 }
