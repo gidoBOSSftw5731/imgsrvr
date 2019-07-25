@@ -64,6 +64,18 @@ func startSQL(sqlAcc string) *sql.DB {
 	return db
 }
 
+//DeleteKeySite is a function to remove the cookie from the user and the key from the db
+func DeleteKeySite(resp http.ResponseWriter, req *http.Request, sqlAcc string) {
+	cookie, err := req.Cookie("session")
+	if err != nil {
+		return
+	} else if cookie.Value == "" {
+		return
+	}
+	db := startSQL(sqlAcc)
+	deleteKey(resp, db, cookie.Value)
+}
+
 func deleteKey(resp http.ResponseWriter, db *sql.DB, token string) error {
 	_, err := db.Exec(`DELETE FROM sessions WHERE token = ?;`, token)
 	cookie := http.Cookie{Name: "session", Value: "", Expires: time.Now()}
@@ -118,7 +130,7 @@ func New(resp http.ResponseWriter, req *http.Request, sqlAcc string) error {
 }
 
 //Verify cookies to make sure they aren't expired or invalid.
-func Verify(resp http.ResponseWriter, req *http.Request, sqlAcc string) (bool, error) {
+func Verify(resp http.ResponseWriter, req *http.Request, sqlAcc string, user *string) (bool, error) {
 	log.Traceln("Beginning to check the key")
 	OK := true
 	cookie, _ := req.Cookie("session")
@@ -131,7 +143,7 @@ func Verify(resp http.ResponseWriter, req *http.Request, sqlAcc string) (bool, e
 	defer db.Close()
 
 	var expr string
-	err := db.QueryRow("SELECT expiration FROM sessions WHERE token=?", cookie.Value).Scan(&expr)
+	err := db.QueryRow("SELECT expiration FROM sessions WHERE token=?", cookie.Value).Scan(&expr, user)
 	switch {
 	case err != nil:
 		log.Errorln("File not in db..")

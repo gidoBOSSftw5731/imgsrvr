@@ -242,7 +242,8 @@ func loginHandler(resp http.ResponseWriter, req *http.Request, config config) {
 		return
 	}
 
-	_, ok := checkKey(resp, req, req.FormValue("fn"), config.sqlAcc, req.FormValue("user"), true)
+	user := req.FormValue("user")
+	_, ok := checkKey(resp, req, req.FormValue("fn"), config.sqlAcc, &user, true)
 	if ok {
 		http.Redirect(resp, req, config.baseURL+"/", 302)
 	} else {
@@ -418,8 +419,8 @@ func checkHash(key, user string, db *sql.DB) (bool, error) {
 }
 
 // checkKey simply looks in the keys map for evidence of a key.
-func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc, user string, newSess bool) (bool, bool) { // session good, key good
-	ok, err := sessions.Verify(resp, req, sqlAcc) // good session
+func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc string, user *string, newSess bool) (bool, bool) { // session good, key good
+	ok, err := sessions.Verify(resp, req, sqlAcc, user) // good session
 	if ok {
 		return true, true
 	}
@@ -434,7 +435,7 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc, use
 	}
 	log.Traceln("Oi, mysql did thing")
 
-	keyOK, err := checkHash(inputKey, user, db)
+	keyOK, err := checkHash(inputKey, *user, db)
 
 	if !keyOK { // key not good
 		return false, false
@@ -483,7 +484,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		return
 	}*/
 
-	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlAcc, user, false)
+	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlAcc, &user, false)
 
 	if sessionGood || keyGood {
 		log.Debugln("Key success!\n")
@@ -779,10 +780,14 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		http.Redirect(resp, req, github, http.StatusSeeOther)
 	case "signin", "login":
 		signIn(resp, req, s.config)
+	case "logout", "signout":
+		sessions.DeleteKeySite(resp, req, s.config.sqlAcc)
+		http.Redirect(resp, req, "/", 302)
 	case "loginhandler":
 		loginHandler(resp, req, s.config)
 	case "verifysession":
-		ok, err := sessions.Verify(resp, req, s.config.sqlAcc)
+		var user string
+		ok, err := sessions.Verify(resp, req, s.config.sqlAcc, &user)
 		if err != nil && err != fmt.Errorf("INVALID") {
 			log.Errorln(err)
 			errorHandler(resp, req, 500)

@@ -17,7 +17,7 @@
 <div id="form">
     
 <form enctype="multipart/form-data" action="%supload/" method="post">
-    <div id="login">
+    <div id="loggedout">
     To save your Sign-In info, go to <a href="/login">the login page below!</a> <br>
     Username: <input type="text" name="user"><br>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Key: <input type="password" name="fn"><br>
@@ -35,33 +35,44 @@
     </div>
     </form>
 </div>
-
-<script>
-    var sessval = httpGet( "/verifysession" );
-
-    if (sessval.includes("true") ) {
-        hide(document.querySelectorAll('#login'));
-    }
-
-    function httpGet(theUrl)
-    {
-        var xmlHttp = new XMLHttpRequest();
-        xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
-        xmlHttp.send( null );
-        return xmlHttp.responseText;
-    }
-
-    function hide (elements) {
-        elements = elements.length ? elements : [elements];
-        for (var index = 0; index < elements.length; index++) {
-            elements[index].style.display = 'none';
-        }
-    }
-</script>
     
 <div id="footer">
-    <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="/login"> Log In </a>
+    <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a id='loggedout' href="/login"> Log In </a>&nbsp;&nbsp;  <a id='loggedin' href="/logout"> LogOut </a>
 </div>
+
+<script>
+        var sessval = httpGet( "/verifysession" );
+    
+        if (sessval.includes("true") ) {
+            hide(document.querySelectorAll('#loggedout'));
+            //show(documents.querySelectorAll('#loggedin'));
+        } else {
+            hide(document.querySelectorAll('#loggedin'));
+        }
+    
+        function httpGet(theUrl)
+        {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
+            xmlHttp.send( null );
+            return xmlHttp.responseText;
+        }
+    
+        function hide (elements) {
+            elements = elements.length ? elements : [elements];
+            for (var index = 0; index < elements.length; index++) {
+                elements[index].style.display = 'none';
+            }
+        }
+    
+      function show (elements, specifiedDisplay) {
+        elements = elements.length ? elements : [elements];
+        for (var index = 0; index < elements.length; index++) {
+            elements[index].style.display = specifiedDisplay || 'block';
+        }
+    }
+    </script>
+
 </body>
 </div>
 </html>
