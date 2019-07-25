@@ -125,6 +125,30 @@ func AppPage(resp http.ResponseWriter, req *http.Request, config Config) {
 
 }
 
+//Directory is a function that opens up the directory of things.
+func Directory(resp http.ResponseWriter, req *http.Request, config Config) {
+	pageTemplate := template.New("first page templated.")
+	content, err := ioutil.ReadFile("server/selector/modules/directory.html")
+	page := string(content)
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		ErrorHandler(resp, req, 404)
+		return
+	}
+	pageTemplate, err = pageTemplate.Parse(page)
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		return
+	}
+	err = pageTemplate.Execute(resp, nil)
+	if err != nil {
+		log.Errorf("template execute error: %v", err)
+		return
+
+	}
+
+}
+
 //SignIn is a function to generate a sign in page
 func SignIn(resp http.ResponseWriter, req *http.Request, config Config) {
 	pageTemplate := template.New("signin page templated.")

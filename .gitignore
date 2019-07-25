@@ -27,5 +27,5 @@ _testmain.go
 keys
 config.go
 log/*
-server/selector/selector.go
+#server/selector/selector.go
 server/selector/modules/*
