@@ -91,12 +91,13 @@ type FastCGIServer struct {
 type hashable struct {
 	key, salt, origHash *string
 	pepper              string
-	ok                  bool
-	wg                  *sync.WaitGroup
 }
 
+//hashes is a struct to hold an array of hashes, a few other details are passed for later processing.
 type hashes struct {
 	arr [52]hashable
+	ok  bool
+	wg  *sync.WaitGroup
 }
 
 //NewFastCGIServer is an implementation of fastcgi server.
@@ -296,6 +297,8 @@ func chkHash(inout chan *hashes) {
 	var output hashes
 	input := <-inout
 
+	var ok bool
+
 	var wg0 sync.WaitGroup
 	var wg1 sync.WaitGroup
 	var wg2 sync.WaitGroup
@@ -310,7 +313,7 @@ func chkHash(inout chan *hashes) {
 		for i := 0; i < len(alphabet)/4; i++ {
 			obj := input.arr[i]
 
-			if obj.ok {
+			if ok {
 				wg0.Done()
 				continue
 			}
@@ -319,7 +322,7 @@ func chkHash(inout chan *hashes) {
 			//log.Traceln(string(obj.pepper), string(*obj.origHash))
 
 			if err == nil {
-				obj.ok = true
+				ok = true
 			}
 			output.arr[i] = obj
 
@@ -330,7 +333,7 @@ func chkHash(inout chan *hashes) {
 		for i := len(alphabet) / 4; i < 2*len(alphabet)/4; i++ {
 			obj := input.arr[i]
 
-			if obj.ok {
+			if ok {
 				wg1.Done()
 				continue
 			}
@@ -339,18 +342,18 @@ func chkHash(inout chan *hashes) {
 			//log.Traceln(string(obj.pepper), string(*obj.origHash))
 
 			if err == nil {
-				obj.ok = true
+				ok = true
 			}
 			output.arr[i] = obj
 
+			wg1.Done()
 		}
-		wg1.Done()
 	}()
 	go func() {
 		for i := 2 * len(alphabet) / 4; i < 3*len(alphabet)/4; i++ {
 			obj := input.arr[i]
 
-			if obj.ok {
+			if ok {
 				wg2.Done()
 				continue
 			}
@@ -359,7 +362,7 @@ func chkHash(inout chan *hashes) {
 			//log.Traceln(string(obj.pepper), string(*obj.origHash))
 
 			if err == nil {
-				obj.ok = true
+				ok = true
 			}
 			output.arr[i] = obj
 
@@ -368,10 +371,9 @@ func chkHash(inout chan *hashes) {
 	}()
 	go func() {
 		for i := 3 * len(alphabet) / 4; i < len(alphabet); i++ {
-
 			obj := input.arr[i]
 
-			if obj.ok {
+			if ok {
 				wg3.Done()
 				continue
 			}
@@ -380,7 +382,7 @@ func chkHash(inout chan *hashes) {
 			//log.Traceln(string(obj.pepper), string(*obj.origHash))
 
 			if err == nil {
-				obj.ok = true
+				ok = true
 			}
 			output.arr[i] = obj
 
@@ -392,6 +394,12 @@ func chkHash(inout chan *hashes) {
 	wg1.Wait()
 	wg2.Wait()
 	wg3.Wait()
+
+	output.ok = ok
+
+	log.Debugln("Done checking password! ", output.ok, ok)
+
+	input.wg.Done()
 
 	inout <- &output
 }
@@ -409,23 +417,29 @@ func checkHash(key, user string, db *sql.DB) (bool, error) {
 	}
 
 	c := make(chan *hashes)
+
 	var wg sync.WaitGroup
+
 	go chkHash(c)
 
+	in.wg = &wg
+	wg.Add(1)
+
 	for i, x := range alphabet {
-		in.arr[i] = hashable{&key, &salt, &origHash, string(x), false, &wg}
-		wg.Add(1)
+		in.arr[i] = hashable{&key, &salt, &origHash, string(x)}
 	}
 	c <- &in
 
 	wg.Wait()
+
+	time.Sleep(20 * time.Millisecond)
+
 	output := *<-c
-	for _, arr := range output.arr {
-		if arr.ok {
-			ok = true
-			break
-		}
+	if output.ok {
+		ok = true
 	}
+
+	log.Debugln("Password Success: ", ok)
 
 	return ok, err
 }
