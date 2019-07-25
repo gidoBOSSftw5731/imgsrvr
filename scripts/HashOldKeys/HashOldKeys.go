@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"../../server"
+	server "../../server/selector/tools"
 	"github.com/gidoBOSSftw5731/log"
 	"golang.org/x/crypto/bcrypt"
 )

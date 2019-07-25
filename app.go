@@ -127,7 +127,7 @@ func main() {
 	//This prints stuff in the console so i get info, just for me
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Error("Error happened!!! Here, take it: %v", err)
+		log.Errorf("Error happened!!! Here, take it: %v", err)
 	}
 	log.Debugf("DIR: %v\n", dir)
 	log.Debugf("Heres the prefix for the url, dummy: %s \n", urlPrefix)
