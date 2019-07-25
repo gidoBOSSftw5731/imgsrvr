@@ -28,4 +28,4 @@ keys
 config.go
 log/*
 #server/selector/selector.go
-server/selector/modules/*
+#server/selector/modules/*
