@@ -87,6 +87,19 @@ type FastCGIServer struct {
 	config config
 }
 
+//hashable is a struct of all the information necessary to check a password hash
+type hashable struct {
+	key, salt, origHash *string
+	pepper              string
+}
+
+//hashes is a struct to hold an array of hashes, a few other details are passed for later processing.
+type hashes struct {
+	arr [52]hashable
+	ok  bool
+	wg  *sync.WaitGroup
+}
+
 //NewFastCGIServer is an implementation of fastcgi server.
 func NewFastCGIServer(urlPrefix, imgStore, baseURL, sqlAcc, recaptchaPrivKey, recaptchaPubKey string, imgHash int) *FastCGIServer {
 	return &FastCGIServer{
@@ -188,6 +201,82 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 
 }
 
+func signIn(resp http.ResponseWriter, req *http.Request, config config) {
+	cookieCheck(resp, req, config)
+	pageTemplate := template.New("signin page templated.")
+	content, err := ioutil.ReadFile("server/signin.html")
+	page := string(content)
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		errorHandler(resp, req, 404)
+		return
+	}
+	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.urlPrefix, config.recaptchaPubKey, config.urlPrefix, config.urlPrefix))
+	if err != nil {
+		log.Errorf("Failed to parse template: %v", err)
+		return
+	}
+	req.ParseForm()
+	field := req.FormValue("fn")
+	//fmt.Println(field)
+	tData := tData{
+		Fn: field,
+	}
+	//upload(resp, req)
+	//log.Traceln("Form data: ", field, "\ntData: ", tData)
+	err = pageTemplate.Execute(resp, tData)
+	if err != nil {
+		log.Errorf("template execute error: %v", err)
+		return
+
+	}
+}
+
+func checkCaptcha(req *http.Request, priv string) (bool, error) {
+	var err error
+
+	re := recaptcha.R{
+		Secret: priv,
+	}
+	//req2 := req
+	isValid := re.Verify(*req) // recaptcha
+	if !isValid {
+		//fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
+		err = fmt.Errorf("Invalid Captcha! These errors ocurred: %v", re.LastError())
+	} else {
+		log.Traceln("recieved a valid captcha response!")
+	}
+
+	if false { // solely for testing, since I sometimes work offline, should be false on prod machines
+		isValid = true
+		err = nil
+	}
+	return isValid, err
+}
+
+func loginHandler(resp http.ResponseWriter, req *http.Request, config config) {
+	log.Traceln("logging someone in!")
+
+	captcha, err := checkCaptcha(req, config.recaptchaPrivKey)
+	if err != nil || !captcha {
+		if err != nil {
+			errorHandler(resp, req, 429)
+			log.Errorf("Wrong Captcha = %v", err)
+			return
+		}
+	}
+
+	req.ParseForm()
+	_, ok := checkKey(resp, req, req.FormValue("fn"), config.sqlAcc, req.FormValue("user"))
+	if ok {
+		http.Redirect(resp, req, config.baseURL+"/", 302)
+	} else {
+		http.Redirect(resp, req, config.baseURL+"/login"+"?issue=BadUserPass", 302)
+		return
+	}
+
+}
+
 // ReadKeys reads a key file from disk, returning a map to use in verification.
 func ReadKeys(kf string) error {
 	// Read the key content from the full file path.
@@ -204,31 +293,153 @@ func ReadKeys(kf string) error {
 	return nil
 }
 
-func checkHash(key, user string, db *sql.DB) (bool, error) {
-	var wg sync.WaitGroup
-	wg.Add(len(alphabet))
+func chkHash(inout chan *hashes) {
+	var output hashes
+	input := <-inout
+
 	var ok bool
 
+	var wg0 sync.WaitGroup
+	var wg1 sync.WaitGroup
+	var wg2 sync.WaitGroup
+	var wg3 sync.WaitGroup
+
+	wg0.Add(len(alphabet) / 4)
+	wg1.Add(len(alphabet) / 4)
+	wg2.Add(len(alphabet) / 4)
+	wg3.Add(len(alphabet) / 4)
+
+	go func() {
+		for i := 0; i < len(alphabet)/4; i++ {
+			obj := input.arr[i]
+
+			if ok {
+				wg0.Done()
+				continue
+			}
+
+			err := bcrypt.CompareHashAndPassword([]byte(*obj.origHash), []byte(string(obj.pepper+*obj.key+*obj.salt)))
+			//log.Traceln(string(obj.pepper), string(*obj.origHash))
+
+			if err == nil {
+				ok = true
+			}
+			output.arr[i] = obj
+
+			wg0.Done()
+		}
+	}()
+	go func() {
+		for i := len(alphabet) / 4; i < 2*len(alphabet)/4; i++ {
+			obj := input.arr[i]
+
+			if ok {
+				wg1.Done()
+				continue
+			}
+
+			err := bcrypt.CompareHashAndPassword([]byte(*obj.origHash), []byte(string(obj.pepper+*obj.key+*obj.salt)))
+			//log.Traceln(string(obj.pepper), string(*obj.origHash))
+
+			if err == nil {
+				ok = true
+			}
+			output.arr[i] = obj
+
+			wg1.Done()
+		}
+	}()
+	go func() {
+		for i := 2 * len(alphabet) / 4; i < 3*len(alphabet)/4; i++ {
+			obj := input.arr[i]
+
+			if ok {
+				wg2.Done()
+				continue
+			}
+
+			err := bcrypt.CompareHashAndPassword([]byte(*obj.origHash), []byte(string(obj.pepper+*obj.key+*obj.salt)))
+			//log.Traceln(string(obj.pepper), string(*obj.origHash))
+
+			if err == nil {
+				ok = true
+			}
+			output.arr[i] = obj
+
+			wg2.Done()
+		}
+	}()
+	go func() {
+		for i := 3 * len(alphabet) / 4; i < len(alphabet); i++ {
+			obj := input.arr[i]
+
+			if ok {
+				wg3.Done()
+				continue
+			}
+
+			err := bcrypt.CompareHashAndPassword([]byte(*obj.origHash), []byte(string(obj.pepper+*obj.key+*obj.salt)))
+			//log.Traceln(string(obj.pepper), string(*obj.origHash))
+
+			if err == nil {
+				ok = true
+			}
+			output.arr[i] = obj
+
+			wg3.Done()
+		}
+	}()
+
+	wg0.Wait()
+	wg1.Wait()
+	wg2.Wait()
+	wg3.Wait()
+
+	output.ok = ok
+
+	log.Debugln("Done checking password! ", output.ok, ok)
+
+	input.wg.Done()
+
+	inout <- &output
+}
+
+func checkHash(key, user string, db *sql.DB) (bool, error) {
+	var ok bool
+
+	//fmt.Println(user)
 	var origHash, salt string
+	var in hashes
 	err := db.QueryRow("SELECT hash, salt FROM users WHERE user=?", user).Scan(&origHash, &salt)
 	if err != nil {
 		log.Errorln(err)
 		return ok, err
 	}
 
-	for _, c := range alphabet {
-		go func(c string) {
-			defer wg.Done()
-			//h, err := bcrypt.GenerateFromPassword([]byte(string(c+key+salt)), cost)
-			err = bcrypt.CompareHashAndPassword([]byte(origHash), []byte(string(c+key+salt)))
-			//log.Traceln(string(h), string(origHash))
-			if err == nil {
-				ok = true
-			}
-		}(string(c))
+	c := make(chan *hashes)
+
+	var wg sync.WaitGroup
+
+	go chkHash(c)
+
+	in.wg = &wg
+	wg.Add(1)
+
+	for i, x := range alphabet {
+		in.arr[i] = hashable{&key, &salt, &origHash, string(x)}
 	}
+	c <- &in
 
 	wg.Wait()
+
+	time.Sleep(20 * time.Millisecond)
+
+	output := *<-c
+	if output.ok {
+		ok = true
+	}
+
+	log.Debugln("Password Success: ", ok)
 
 	return ok, err
 }
@@ -274,8 +485,28 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc, use
 func upload(resp http.ResponseWriter, req *http.Request, config config) /*(string, error)*/ {
 	//fmt.Println("[DEBUG ONLY] Key is:", inputKey) // have this off unless testing
 
+	req.ParseMultipartForm(2 ^ 64 - 1)
+	req.Header.Add("Content-Type", "multipart/form-data")
+
 	inputKey := req.FormValue("fn")
 	user := req.FormValue("user")
+
+	captcha, err := checkCaptcha(req, config.recaptchaPrivKey)
+	if err != nil || !captcha {
+		if err != nil {
+			errorHandler(resp, req, 429)
+			log.Errorf("Wrong Captcha = %v", err)
+			return
+		}
+	}
+
+	//err = req.ParseMultipartForm(107374182400) // max upload in... bytes..?
+	/*err = req.ParseForm()
+	if err != nil {
+		errorHandler(resp, req, http.StatusBadRequest)
+		log.Errorf("File too Big! err = %v", err)
+		return
+	}*/
 
 	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlAcc, user)
 
@@ -288,17 +519,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 	}
 
 	if !sessionGood {
-		re := recaptcha.R{
-			Secret: config.recaptchaPrivKey,
-		}
-		isValid := re.Verify(*req) // recaptcha
-		if !isValid {
-			fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
-			fmt.Printf("Invalid Captcha! These errors ocurred: %v", re.LastError())
-			return
-		} else {
-			log.Traceln("recieved a valid captcha response!")
-		}
+
 	}
 	if req.Method == "POST" {
 		db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", config.sqlAcc))
@@ -310,13 +531,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		defer db.Close()
 		// end of SQL opening
 
-		err = req.ParseMultipartForm(107374182400) // max upload in... bytes..?
-		if err != nil {
-			errorHandler(resp, req, http.StatusBadRequest)
-			log.Errorf("File too Big! err = %v", err)
-			return
-		}
-		req.ParseForm()
+		//req.ParseForm()
 		//img := req.FormFile("img")
 		log.Trace("Yo, its POST for the upload, btw")
 		crutime := time.Now().Unix()
@@ -589,7 +804,10 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	case "github", "git":
 		github := "https://github.com/gidoBOSSftw5731"
 		http.Redirect(resp, req, github, http.StatusSeeOther)
-
+	case "signin", "login":
+		signIn(resp, req, s.config)
+	case "loginhandler":
+		loginHandler(resp, req, s.config)
 	case "":
 		//raven.RecoveryHandler(appPage(resp, req, s.config))
 		appPage(resp, req, s.config)
