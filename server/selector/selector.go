@@ -81,7 +81,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		}
 		fmt.Fprintln(obj.Resp, ok)
 	case "directory":
-		tools.Directory(resp, req, config)
+		tools.Directory(obj.Resp, obj.Req, config)
 	case "":
 		//raven.RecoveryHandler(appPage(obj.Resp, obj.Req, config))
 		tools.AppPage(obj.Resp, obj.Req, config)
