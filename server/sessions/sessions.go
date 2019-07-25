@@ -31,6 +31,15 @@ type Cookie struct {
 	Unparsed []string // Raw text of unparsed attribute-value pairs
 }
 
+func fixOldTables(db *sql.DB) {
+	_, err := db.Query("SHOW COLUMNS FROM `sessions` LIKE 'ip';")
+
+	if err != sql.ErrNoRows {
+		log.Debugln("fixing mysql sessions")
+		db.Exec("ALTER TABLE sessions CHANGE ip user varchar(255);")
+	}
+}
+
 func getClientIP(req *http.Request) string {
 	ip := req.RemoteAddr
 	ipSplit := strings.Split(":", ip)
@@ -50,7 +59,21 @@ func startSQL(sqlAcc string) *sql.DB {
 	log.Debug("Oi, mysql did thing")
 	//defer db.Close()
 
+	fixOldTables(db)
+
 	return db
+}
+
+//DeleteKeySite is a function to remove the cookie from the user and the key from the db
+func DeleteKeySite(resp http.ResponseWriter, req *http.Request, sqlAcc string) {
+	cookie, err := req.Cookie("session")
+	if err != nil {
+		return
+	} else if cookie.Value == "" {
+		return
+	}
+	db := startSQL(sqlAcc)
+	deleteKey(resp, db, cookie.Value)
 }
 
 func deleteKey(resp http.ResponseWriter, db *sql.DB, token string) error {
@@ -69,7 +92,7 @@ func New(resp http.ResponseWriter, req *http.Request, sqlAcc string) error {
 	if lastcookie != nil {
 		return fmt.Errorf("SESSION_EXISTS")
 	}
-	expiration := time.Now().Add(24 * time.Hour).Unix()
+	expiration := time.Now().Add(720 * time.Hour).Unix()
 	allowedCharsSplit := strings.Split(allowedChars, "")
 	var session string
 	var x int
@@ -79,7 +102,7 @@ func New(resp http.ResponseWriter, req *http.Request, sqlAcc string) error {
 		session += allowedCharsSplit[x]          // Using x to navigate the split for one character
 	}
 
-	cookie := http.Cookie{Name: "session", Value: session, Expires: time.Unix(expiration, 0)}
+	cookie := http.Cookie{Name: "session", Value: session, Expires: time.Unix(expiration, 0), Path: "/"}
 
 	db := startSQL(sqlAcc)
 	defer db.Close()
@@ -88,7 +111,7 @@ func New(resp http.ResponseWriter, req *http.Request, sqlAcc string) error {
 	switch {
 	case err == sql.ErrNoRows:
 		log.Debug("New session, adding..")
-		_, err := db.Exec("INSERT INTO sessions VALUES(?, ?, ?)", session, expiration, getClientIP(req))
+		_, err := db.Exec("INSERT INTO sessions VALUES(?, ?, ?)", session, expiration, req.FormValue("user"))
 		if err != nil {
 			log.Error(err)
 			return err
@@ -107,10 +130,11 @@ func New(resp http.ResponseWriter, req *http.Request, sqlAcc string) error {
 }
 
 //Verify cookies to make sure they aren't expired or invalid.
-func Verify(resp http.ResponseWriter, req *http.Request, sqlAcc string) (bool, error) {
+func Verify(resp http.ResponseWriter, req *http.Request, sqlAcc string, user *string) (bool, error) {
 	log.Traceln("Beginning to check the key")
 	OK := true
 	cookie, _ := req.Cookie("session")
+
 	if cookie == nil {
 		return false, fmt.Errorf("INVALID")
 	}
@@ -118,8 +142,8 @@ func Verify(resp http.ResponseWriter, req *http.Request, sqlAcc string) (bool, e
 	db := startSQL(sqlAcc)
 	defer db.Close()
 
-	var expr, ip string
-	err := db.QueryRow("SELECT expiration, ip FROM sessions WHERE token=?", cookie.Value).Scan(&expr, &ip)
+	var expr string
+	err := db.QueryRow("SELECT expiration FROM sessions WHERE token=?", cookie.Value).Scan(&expr, user)
 	switch {
 	case err != nil:
 		log.Errorln("File not in db..")

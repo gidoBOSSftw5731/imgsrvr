@@ -143,30 +143,6 @@ func cookieCheck(resp http.ResponseWriter, req *http.Request, config config) {
 
 }*/
 
-//todoPage is a standard func for the setup of the todo page.
-func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
-	cookieCheck(resp, req, config)
-	todoPageTemplate := template.New("first page templated.")
-	content, err := ioutil.ReadFile("server/todoPageVar.html")
-	todoPageVar := string(content)
-	if err != nil {
-		log.Errorf("Failed to parse template: %v", err)
-		errorHandler(resp, req, 404)
-		return
-	}
-	todoPageTemplate, err = todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix))
-	if err != nil {
-		log.Errorf("Failed to parse template: %v", err)
-		errorHandler(resp, req, 404)
-		return
-	}
-	field := req.FormValue("tn")
-	tData := tData{
-		Fn: field,
-	}
-	err = todoPageTemplate.Execute(resp, tData)
-}
-
 //appPage is a standard func for the setup of the main page.
 func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 	cookieCheck(resp, req, config)
@@ -179,7 +155,7 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 		return
 	}
 	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey,
-		config.urlPrefix, config.urlPrefix))
+		config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -211,7 +187,7 @@ func signIn(resp http.ResponseWriter, req *http.Request, config config) {
 		errorHandler(resp, req, 404)
 		return
 	}
-	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.urlPrefix, config.recaptchaPubKey, config.urlPrefix, config.urlPrefix))
+	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.urlPrefix, config.recaptchaPubKey, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -257,17 +233,17 @@ func checkCaptcha(req *http.Request, priv string) (bool, error) {
 func loginHandler(resp http.ResponseWriter, req *http.Request, config config) {
 	log.Traceln("logging someone in!")
 
+	req.ParseForm()
+
 	captcha, err := checkCaptcha(req, config.recaptchaPrivKey)
 	if err != nil || !captcha {
-		if err != nil {
-			errorHandler(resp, req, 429)
-			log.Errorf("Wrong Captcha = %v", err)
-			return
-		}
+		errorHandler(resp, req, 429)
+		log.Errorf("Wrong Captcha = %v", err)
+		return
 	}
 
-	req.ParseForm()
-	_, ok := checkKey(resp, req, req.FormValue("fn"), config.sqlAcc, req.FormValue("user"))
+	user := req.FormValue("user")
+	_, ok := checkKey(resp, req, req.FormValue("fn"), config.sqlAcc, &user, true)
 	if ok {
 		http.Redirect(resp, req, config.baseURL+"/", 302)
 	} else {
@@ -397,7 +373,7 @@ func chkHash(inout chan *hashes) {
 
 	output.ok = ok
 
-	log.Debugln("Done checking password! ", output.ok, ok)
+	log.Debugln("Done checking password!")
 
 	input.wg.Done()
 
@@ -432,8 +408,6 @@ func checkHash(key, user string, db *sql.DB) (bool, error) {
 
 	wg.Wait()
 
-	time.Sleep(20 * time.Millisecond)
-
 	output := *<-c
 	if output.ok {
 		ok = true
@@ -445,8 +419,8 @@ func checkHash(key, user string, db *sql.DB) (bool, error) {
 }
 
 // checkKey simply looks in the keys map for evidence of a key.
-func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc, user string) (bool, bool) { // session good, key good
-	ok, err := sessions.Verify(resp, req, sqlAcc) // good session
+func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc string, user *string, newSess bool) (bool, bool) { // session good, key good
+	ok, err := sessions.Verify(resp, req, sqlAcc, user) // good session
 	if ok {
 		return true, true
 	}
@@ -461,20 +435,22 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc, use
 	}
 	log.Traceln("Oi, mysql did thing")
 
-	keyOK, err := checkHash(inputKey, user, db)
+	keyOK, err := checkHash(inputKey, *user, db)
 
 	if !keyOK { // key not good
 		return false, false
 	}
 
-	err = sessions.New(resp, req, sqlAcc) // make new session if none found and valid key
-	if err != nil {
-		log.Errorln(err)
+	if newSess {
+		err = sessions.New(resp, req, sqlAcc) // make new session if none found and valid key
+		if err != nil {
+			log.Errorln(err)
 
-		switch err.Error() {
-		case "SESSION_EXISTS", "":
-		default:
-			return false, false
+			switch err.Error() {
+			case "SESSION_EXISTS", "":
+			default:
+				return false, false
+			}
 		}
 	}
 
@@ -508,7 +484,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 		return
 	}*/
 
-	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlAcc, user)
+	sessionGood, keyGood := checkKey(resp, req, inputKey, config.sqlAcc, &user, false)
 
 	if sessionGood || keyGood {
 		log.Debugln("Key success!\n")
@@ -533,7 +509,7 @@ func upload(resp http.ResponseWriter, req *http.Request, config config) /*(strin
 
 		//req.ParseForm()
 		//img := req.FormFile("img")
-		log.Trace("Yo, its POST for the upload, btw")
+		log.Trace("It's POST for the upload")
 		crutime := time.Now().Unix()
 		log.Trace("Beep Beep Beep... The time is:", crutime)
 		file, handler, err := req.FormFile("uploadfile") // Saving file to memory
@@ -773,8 +749,6 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	case "upload":
 		log.Traceln("Upload selected")
 		upload(resp, req, s.config)
-	case "todo":
-		todoPage(resp, req, s.config)
 	case "favicon.ico", "favicon-16x16.png", "favicon-32x32.png", "favicon-96x96.png", "favicon-256x256" +
 		".png", "android-icon-192x192.png", "apple-icon-114x114.png", "apple-icon-120x120.png", "apple-icon-" +
 		"144x144.png", "apple-icon-152x152.png", "apple-icon-180x180.png", "apple-icon-57x57.png", "apple-icon-" +
@@ -806,8 +780,20 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		http.Redirect(resp, req, github, http.StatusSeeOther)
 	case "signin", "login":
 		signIn(resp, req, s.config)
+	case "logout", "signout":
+		sessions.DeleteKeySite(resp, req, s.config.sqlAcc)
+		http.Redirect(resp, req, "/", 302)
 	case "loginhandler":
 		loginHandler(resp, req, s.config)
+	case "verifysession":
+		var user string
+		ok, err := sessions.Verify(resp, req, s.config.sqlAcc, &user)
+		if err != nil && err != fmt.Errorf("INVALID") {
+			log.Errorln(err)
+			errorHandler(resp, req, 500)
+			return
+		}
+		fmt.Fprintln(resp, ok)
 	case "":
 		//raven.RecoveryHandler(appPage(resp, req, s.config))
 		appPage(resp, req, s.config)
