@@ -4,7 +4,6 @@
 <head>
 <meta name="google-site-verification" content="2QLKtDFPPQwFab4Tx2Gf0TJ1SVMI1lSA4VfKsA90SaY" /> <!-- ssshhh... -->
 <title>Imagen Dot Click</title>
-<link rel="stylesheet" type="text/css" href="css/firstPage.css" />
 <link rel="stylesheet" type="text/css" href="css/global.css" />
 <script src='https://www.google.com/recaptcha/api.js'></script>
 <meta name="msvalidate.01" content="864046E07A1B992B74A4682F7D3CCD7E" />
@@ -13,13 +12,16 @@
 <body>
 <div id="header">
     <h1>IMAGEN.CLICK</h1>
-<h4> <a href="https://github.com/gidoBOSSftw5731/imgsrvr/tree/master"> See the code! </h4></a><br>
+<h4> <a href="https://github.com/gidoBOSSftw5731/imgsrvr/tree/master"> See the code! </h4></a>
 </div>
 <div id="form">
     
 <form enctype="multipart/form-data" action="%supload/" method="post">
+    <div id="login">
+    To save your Sign-In info, go to <a href="/login">the login page below!</a> <br>
     Username: <input type="text" name="user"><br>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Key: <input type="password" name="fn"><br>
+    </div>
 	<label for="upload" class="upload">
     IMG: <input type="file"  id="upload" name="uploadfile"><br>
     </label>
@@ -33,9 +35,32 @@
     </div>
     </form>
 </div>
+
+<script>
+    var sessval = httpGet( "/verifysession" );
+
+    if (sessval.includes("true") ) {
+        hide(document.querySelectorAll('#login'));
+    }
+
+    function httpGet(theUrl)
+    {
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
+        xmlHttp.send( null );
+        return xmlHttp.responseText;
+    }
+
+    function hide (elements) {
+        elements = elements.length ? elements : [elements];
+        for (var index = 0; index < elements.length; index++) {
+            elements[index].style.display = 'none';
+        }
+    }
+</script>
     
 <div id="footer">
-    <a href="%v"> Home Page </a>
+    <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="/login"> Log In </a>
 </div>
 </body>
 </div>
