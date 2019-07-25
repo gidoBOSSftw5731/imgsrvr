@@ -45,3 +45,68 @@ a {
     background-color: #141d26;
     padding: 28px 50px;
 }
+
+#form {
+    width: 780px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 10px;
+    text-align: center;
+}
+
+form input[type=password] input[type=text] {
+    background-color: lightgrey;
+    color: lightslategray;
+    padding: 5px;
+    width: 30%;
+}
+
+form #upload {
+    /*background-color: lightslategray;*/
+    color: darkslategray;
+    padding: 5px;
+    width: 30%
+}
+
+#captcha, .g-recaptcha, coinhive-captcha {
+    text-align: center;
+    display: inline-block;
+}
+
+ #myProgress {
+    width: 100%;
+    background-color: grey;
+}
+#myBar {
+    width: 1%;
+    height: 30px;
+    background-color: green;
+}
+
+#submit input:default {
+    background-color: black;
+    border: none;
+    color: lightgrey;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    width: 100%;
+}
+
+#submit input:hover {
+    background-color: aquamarine;
+    border: none;
+    color: black;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    width: 100%;
+}
+
+#submit input:active{
+    background-color: magenta;
+}

@@ -143,30 +143,6 @@ func cookieCheck(resp http.ResponseWriter, req *http.Request, config config) {
 
 }*/
 
-//todoPage is a standard func for the setup of the todo page.
-func todoPage(resp http.ResponseWriter, req *http.Request, config config) {
-	cookieCheck(resp, req, config)
-	todoPageTemplate := template.New("first page templated.")
-	content, err := ioutil.ReadFile("server/todoPageVar.html")
-	todoPageVar := string(content)
-	if err != nil {
-		log.Errorf("Failed to parse template: %v", err)
-		errorHandler(resp, req, 404)
-		return
-	}
-	todoPageTemplate, err = todoPageTemplate.Parse(fmt.Sprintf(todoPageVar, config.urlPrefix, config.urlPrefix))
-	if err != nil {
-		log.Errorf("Failed to parse template: %v", err)
-		errorHandler(resp, req, 404)
-		return
-	}
-	field := req.FormValue("tn")
-	tData := tData{
-		Fn: field,
-	}
-	err = todoPageTemplate.Execute(resp, tData)
-}
-
 //appPage is a standard func for the setup of the main page.
 func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 	cookieCheck(resp, req, config)
@@ -179,7 +155,7 @@ func appPage(resp http.ResponseWriter, req *http.Request, config config) {
 		return
 	}
 	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.urlPrefix, config.recaptchaPubKey,
-		config.urlPrefix, config.urlPrefix))
+		config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -211,7 +187,7 @@ func signIn(resp http.ResponseWriter, req *http.Request, config config) {
 		errorHandler(resp, req, 404)
 		return
 	}
-	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.urlPrefix, config.recaptchaPubKey, config.urlPrefix, config.urlPrefix))
+	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.urlPrefix, config.recaptchaPubKey, config.urlPrefix))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -773,8 +749,6 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	case "upload":
 		log.Traceln("Upload selected")
 		upload(resp, req, s.config)
-	case "todo":
-		todoPage(resp, req, s.config)
 	case "favicon.ico", "favicon-16x16.png", "favicon-32x32.png", "favicon-96x96.png", "favicon-256x256" +
 		".png", "android-icon-192x192.png", "apple-icon-114x114.png", "apple-icon-120x120.png", "apple-icon-" +
 		"144x144.png", "apple-icon-152x152.png", "apple-icon-180x180.png", "apple-icon-57x57.png", "apple-icon-" +
