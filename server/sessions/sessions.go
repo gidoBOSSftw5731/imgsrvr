@@ -143,7 +143,7 @@ func Verify(resp http.ResponseWriter, req *http.Request, sqlAcc string, user *st
 	defer db.Close()
 
 	var expr string
-	err := db.QueryRow("SELECT expiration FROM sessions WHERE token=?", cookie.Value).Scan(&expr, user)
+	err := db.QueryRow("SELECT expiration, user FROM sessions WHERE token=?", cookie.Value).Scan(&expr, user)
 	switch {
 	case err != nil:
 		log.Errorln("File not in db..")
