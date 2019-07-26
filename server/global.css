@@ -17,7 +17,7 @@ a {
     font-family: 'Ubuntu', "Comic Sans MS", sans-serif;
 }
 
-a:visited {
+a:visited a:link {
     color: lightgrey;
     text-decoration: none;
 }
