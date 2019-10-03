@@ -19,8 +19,8 @@ import (
 
 	"../../sessions"
 
+	recaptcha "github.com/ezzarghili/recaptcha-go.v3"
 	"github.com/gidoBOSSftw5731/log"
-	"github.com/haisum/recaptcha"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -103,8 +103,8 @@ func AppPage(resp http.ResponseWriter, req *http.Request, config Config) {
 		ErrorHandler(resp, req, 404)
 		return
 	}
-	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.URLPrefix, config.RecaptchaPubKey,
-		config.URLPrefix))
+	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.RecaptchaPubKey, config.URLPrefix, config.RecaptchaPubKey,
+		config.RecaptchaPubKey, config.RecaptchaPubKey))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -159,7 +159,7 @@ func SignIn(resp http.ResponseWriter, req *http.Request, config Config) {
 		ErrorHandler(resp, req, 404)
 		return
 	}
-	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.URLPrefix, config.RecaptchaPubKey, config.URLPrefix))
+	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.RecaptchaPubKey, config.URLPrefix, config.RecaptchaPubKey, config.URLPrefix, config.RecaptchaPubKey))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -186,8 +186,10 @@ func LoginHandler(resp http.ResponseWriter, req *http.Request, config Config) {
 
 	req.ParseForm()
 
-	captcha, err := checkCaptcha(req, config.RecaptchaPrivKey)
-	if err != nil || !captcha {
+	captchaResponse := req.FormValue("g-recaptcha-response")
+	log.Traceln(captchaResponse)
+	_, err := checkCaptcha(captchaResponse, config.RecaptchaPrivKey)
+	if err != nil {
 		ErrorHandler(resp, req, 429)
 		log.Errorf("Wrong Captcha = %v", err)
 		return
@@ -503,25 +505,25 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc stri
 	return false, true // session bad key good
 }
 
-func checkCaptcha(req *http.Request, priv string) (bool, error) {
+//uses recaptcha v3
+func checkCaptcha(response, priv string) (bool, error) {
 	var err error
+	var isValid bool
 
-	re := recaptcha.R{
-		Secret: priv,
+	captcha, err := recaptcha.NewReCAPTCHA(priv, recaptcha.V3, 10*time.Second)
+	if err != nil {
+		return false, err
 	}
-	//req2 := req
-	isValid := re.Verify(*req) // recaptcha
-	if !isValid {
-		//fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
-		err = fmt.Errorf("Invalid Captcha! These errors ocurred: %v", re.LastError())
-	} else {
-		log.Traceln("recieved a valid captcha response!")
+	err = captcha.VerifyWithOptions(response, recaptcha.VerifyOption{Action: "homepage", Treshold: .5})
+	if err != nil {
+		isValid = true
 	}
 
 	if false { // solely for testing, since I sometimes work offline, should be false on prod machines
 		isValid = true
 		err = nil
 	}
+
 	return isValid, err
 }
 
@@ -534,8 +536,10 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 
 	inputKey := req.FormValue("fn")
 	user := req.FormValue("user")
+	captchaResponse := req.FormValue("g-recaptcha-response")
+	//log.Traceln(captchaResponse)
 
-	captcha, err := checkCaptcha(req, config.RecaptchaPrivKey)
+	captcha, err := checkCaptcha(captchaResponse, config.RecaptchaPrivKey)
 	if err != nil || !captcha {
 		if err != nil {
 			ErrorHandler(resp, req, 429)

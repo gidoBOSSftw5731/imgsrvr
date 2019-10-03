@@ -1,7 +1,7 @@
 <html>
 	<head>
         <link rel="stylesheet" type="text/css" href="css/global.css" />
-        <script async src='https://www.google.com/recaptcha/api.js'></script>
+        <script src='https://www.google.com/recaptcha/api.js?render=%v'></script>
         <title>Imagen Dot Click: Sign In</title>
     </head>
     <body>
@@ -14,20 +14,35 @@
                 Username: <input type="text" name="user"><br>
                 Key: <input type="password" name="fn"><br>
                 <div id=captcha>
-                <div id="recaptcha" class="g-recaptcha" data-theme="dark" data-sitekey="%v">
-                </div>
+                        <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response">
+                        <input type="hidden" name="action" value="homepage">
                 </div>
                 <div id="status"></div>
                 <script type="text/javascript">
                     document.write(qs("issue"));
                 </script>
                 <div id="submit">
-                <input type="submit" value="Go!">
+                        <button class="g-recaptcha" data-sitekey="%v" id="submit"
+            data-callback="document.getElementById('form').submit()" data-badge="inline" type="submit">
+           Go!</button>
                 </div>
                 </form>
             </div>
 
             <div id="footer"><footer> <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a href="login"> Log In </a></footer></div>
         </div>  
+
+        <script>
+                grecaptcha.ready(function() {
+                // do request for recaptcha token
+                // response is promise with passed token
+                    grecaptcha.execute('%v', {action:'homepage'})
+                              .then(function(token) {
+                        // add token value to form
+                        document.getElementById('g-recaptcha-response').value = token;
+                    });
+                });
+            </script>
+
         </body>
 </html>
