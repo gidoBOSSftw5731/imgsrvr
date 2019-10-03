@@ -19,7 +19,7 @@ import (
 
 	"../../sessions"
 
-	recaptcha "github.com/ezzarghili/recaptcha-go.v3"
+	recaptcha "github.com/ezzarghili/recaptcha-go"
 	"github.com/gidoBOSSftw5731/log"
 	"golang.org/x/crypto/bcrypt"
 )
