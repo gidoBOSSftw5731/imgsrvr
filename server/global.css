@@ -72,7 +72,7 @@ form #upload {
     width: 30%
 }
 
-#captcha, .g-recaptcha, coinhive-captcha {
+#captcha, .g-recaptcha, coinhive-captcha, .grecaptcha-logo, .grecaptcha-badge {
     text-align: center;
     display: inline-block;
 }
@@ -87,7 +87,7 @@ form #upload {
     background-color: green;
 }
 
-#submit input:default {
+#submit button:default {
     background-color: black;
     border: none;
     color: lightgrey;
@@ -99,7 +99,7 @@ form #upload {
     width: 100%;
 }
 
-#submit input:hover {
+#submit button:hover {
     background-color: aquamarine;
     border: none;
     color: black;
@@ -111,6 +111,6 @@ form #upload {
     width: 100%;
 }
 
-#submit input:active{
+#submit button:active{
     background-color: magenta;
 }

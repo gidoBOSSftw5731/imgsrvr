@@ -12,7 +12,7 @@ const (
 	sqlAcc           = "" // MySQL user/password stored as user:pass
 	imgStore         = "/var/tmp/imgStorage/"
 	baseURL          = "http://localhost" //MUST INCLUDE HTTP/HTTPS, this should really be calles hostname...
-	recaptchaPrivKey = "google captcha priv key"
+	recaptchaPrivKey = "google captcha priv key" // RECAPTCHA v3
 	recaptchaPubKey  = "google captcha pub key"
 	loggingLevel     = 2 // 0 is panics only, 1 is errors, 2 is info, 3 is debug, 4 is trace
 )
