@@ -20,7 +20,7 @@ import (
 	"../../sessions"
 
 	"github.com/gidoBOSSftw5731/log"
-	"github.com/haisum/recaptcha"
+	"github.com/ezzarghili/recaptcha-go.v3"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -503,20 +503,13 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc stri
 	return false, true // session bad key good
 }
 
-func checkCaptcha(req *http.Request, priv string) (bool, error) {
+//uses recaptcha v3
+func checkCaptcha(response, priv string) (bool, error) {
 	var err error
+	var isValid bool
 
-	re := recaptcha.R{
-		Secret: priv,
-	}
-	//req2 := req
-	isValid := re.Verify(*req) // recaptcha
-	if !isValid {
-		//fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
-		err = fmt.Errorf("Invalid Captcha! These errors ocurred: %v", re.LastError())
-	} else {
-		log.Traceln("recieved a valid captcha response!")
-	}
+	captcha := recaptcha.NewRECAPTCHA(priv, recaptcha.V3, 10*time.Second)
+	err = captcha.Verify(response, , vetifyOpions)
 
 	if false { // solely for testing, since I sometimes work offline, should be false on prod machines
 		isValid = true
