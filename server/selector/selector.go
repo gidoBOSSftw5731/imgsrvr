@@ -2,10 +2,15 @@ package selector
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
+	"strings"
 
 	"../sessions"
+	moocowtools "./modules/ProjectMoocow/tools"
+	moocow "./modules/ProjectMoocow/web"
 	"./tools"
 	"github.com/gidoBOSSftw5731/log"
 )
@@ -82,6 +87,59 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		fmt.Fprintln(obj.Resp, ok)
 	case "directory":
 		tools.Directory(obj.Resp, obj.Req, config)
+	case "pinbot":
+		wd, _ := os.Getwd()
+
+		if strings.Contains(obj.Req.URL.Path, "css") {
+			http.ServeFile(obj.Resp, obj.Req, path.Join(wd, "server/selector/modules/ProjectMoocow/web/templates/main.css"))
+		} else if obj.URLECount < 4 {
+			tools.ErrorHandler(obj.Resp, obj.Req, 404)
+			return
+		}
+
+		var moocowconfig moocowtools.Config
+		moocowtools.Configor(&moocowconfig, "server/selector/modules/ProjectMoocow/config.yml")
+
+		discord, err := moocowtools.DiscordSession(moocowconfig)
+		if err != nil {
+			log.Errorln(err)
+			tools.ErrorHandler(obj.Resp, obj.Req, 500)
+			return
+		}
+
+		sql := moocow.SQLInfo{moocowconfig.DB.User,
+			moocowconfig.DB.Password,
+			moocowconfig.DB.IP,
+			moocowconfig.DB.Port}
+
+		log.Debugf("Guild: %v Channel: %v", obj.URLSplit[2], obj.URLSplit[3])
+		webpage, err := moocow.Webpage(obj.URLSplit[2], obj.URLSplit[3], discord, sql,
+			path.Join(wd, "server/selector/modules/ProjectMoocow/web/templates"))
+		if err != nil {
+			log.Errorln(err)
+			tools.ErrorHandler(obj.Resp, obj.Req, 500)
+			return
+		}
+
+		tmpFile, err := ioutil.TempFile(os.TempDir(), "prefix-")
+		if err != nil {
+			log.Errorln(err)
+			tools.ErrorHandler(obj.Resp, obj.Req, 500)
+			return
+		}
+		defer os.Remove(tmpFile.Name())
+
+		_, err = tmpFile.Write([]byte(webpage))
+		if err != nil {
+			log.Errorln(err)
+			tools.ErrorHandler(obj.Resp, obj.Req, 500)
+			return
+		}
+
+		http.ServeFile(obj.Resp, obj.Req, tmpFile.Name())
+
+		tmpFile.Close()
+
 	case "":
 		//raven.RecoveryHandler(appPage(obj.Resp, obj.Req, config))
 		tools.AppPage(obj.Resp, obj.Req, config)
