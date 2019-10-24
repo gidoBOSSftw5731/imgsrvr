@@ -92,6 +92,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 
 		if strings.Contains(obj.Req.URL.Path, "css") {
 			http.ServeFile(obj.Resp, obj.Req, path.Join(wd, "server/selector/modules/ProjectMoocow/web/templates/main.css"))
+			return
 		} else if obj.URLECount < 4 {
 			tools.ErrorHandler(obj.Resp, obj.Req, 404)
 			return
