@@ -514,7 +514,7 @@ func checkCaptcha(response, priv string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	err = captcha.VerifyWithOptions(response, recaptcha.VerifyOption{Action: "homepage", Treshold: .5})
+	err = captcha.VerifyWithOptions(response, recaptcha.VerifyOption{Action: "homepage", Threshold: .5})
 	if err != nil {
 		isValid = true
 	}
