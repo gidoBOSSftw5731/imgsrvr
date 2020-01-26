@@ -140,6 +140,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		http.ServeFile(obj.Resp, obj.Req, tmpFile.Name())
 
 		tmpFile.Close()
+		discord.Close()
 
 	case "":
 		//raven.RecoveryHandler(appPage(obj.Resp, obj.Req, config))
