@@ -507,7 +507,7 @@ func checkCaptcha(response, priv string) (bool, error) {
 		return false, err
 	}
 	err = captcha.VerifyWithOptions(response, recaptcha.VerifyOption{Action: "homepage", Threshold: .5})
-	if err != nil {
+	if err == nil {
 		isValid = true
 	}
 
@@ -554,7 +554,8 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 		log.Debugln("Key success!")
 	} else {
 		log.Errorln("Invalid/no key")
-		fmt.Fprintln(resp, "Invalid/No key!!!")
+		//fmt.Fprintln(resp, "Invalid/No key!!!")
+		ErrorHandler(resp, req, 400, "Are we really real? (invalid or no key)")
 		return
 	}
 
