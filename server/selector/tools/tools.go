@@ -55,8 +55,8 @@ const (
 
 //tData is a struct for HTTP inputs.
 type tData struct {
-	Fn string
-	Tn string
+	CaptchaPub string
+	URLPrefix  string
 }
 
 //FileHeader is used for when you download a file from the client. It stores all relevant information in Header.
@@ -96,15 +96,15 @@ type Cookie struct {
 //AppPage is a standard func for the setup of the main page.
 func AppPage(resp http.ResponseWriter, req *http.Request, config Config) {
 	firstPageTemplate := template.New("first page templated.")
+
 	content, err := ioutil.ReadFile("server/firstPage.html")
-	firstPage := string(content)
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		ErrorHandler(resp, req, 404)
 		return
 	}
-	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.RecaptchaPubKey, config.URLPrefix, config.RecaptchaPubKey,
-		config.RecaptchaPubKey, config.RecaptchaPubKey))
+
+	firstPageTemplate, err = firstPageTemplate.Parse(string(content))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -112,8 +112,8 @@ func AppPage(resp http.ResponseWriter, req *http.Request, config Config) {
 	req.ParseForm()
 
 	tData := tData{ //template data
-		Fn: "",
-	}
+		config.RecaptchaPubKey,
+		config.URLPrefix}
 	//upload(resp, req)
 	//log.Traceln("Form data: ", field, "\ntData: ", tData)
 	err = firstPageTemplate.Execute(resp, tData)
@@ -159,17 +159,17 @@ func SignIn(resp http.ResponseWriter, req *http.Request, config Config) {
 		ErrorHandler(resp, req, 404)
 		return
 	}
-	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.RecaptchaPubKey, config.URLPrefix, config.RecaptchaPubKey, config.URLPrefix, config.RecaptchaPubKey))
+	pageTemplate, err = pageTemplate.Parse(page)
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
 	}
 	req.ParseForm()
-	field := req.FormValue("fn")
+	//field := req.FormValue("fn")
 	//fmt.Println(field)
 	tData := tData{
-		Fn: field,
-	}
+		config.RecaptchaPubKey,
+		config.URLPrefix}
 	//upload(resp, req)
 	//log.Traceln("Form data: ", field, "\ntData: ", tData)
 	err = pageTemplate.Execute(resp, tData)
@@ -211,14 +211,11 @@ func SendImg(resp http.ResponseWriter, req *http.Request, img string, config Con
 	db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", config.SQLAcc))
 	if err != nil {
 		log.Errorln("Oh noez, could not connect to database")
+		ErrorHandler(resp, req, 500)
 		return
 	}
 	log.Traceln("Oi, mysql did thing")
 
-	if err != nil {
-		log.Errorln("Oh noez, could not connect to database")
-		return
-	}
 	defer db.Close() // end of SQL opening
 	imgSplit := strings.Split(img, ".")
 	img = imgSplit[0]
