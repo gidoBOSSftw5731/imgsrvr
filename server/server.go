@@ -59,7 +59,7 @@ func (s FastCGIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	// Checking amt of elements in url (else sends 404)
 	//Check for prefix
 	if caseobj.URLECount < 2 || !strings.HasPrefix(req.URL.Path, s.config.URLPrefix) {
-		tools.ErrorHandler(resp, req, http.StatusNotFound)
+		tools.ErrorHandler(resp, req, http.StatusNotFound, "Fix ur link m8")
 		return
 	}
 	// Defining variables as if there was NO prefix (this will never happen)

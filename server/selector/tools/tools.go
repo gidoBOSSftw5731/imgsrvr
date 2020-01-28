@@ -100,7 +100,7 @@ func AppPage(resp http.ResponseWriter, req *http.Request, config Config) {
 	content, err := ioutil.ReadFile("server/firstPage.html")
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "File Not found, Oopsie doopsie")
 		return
 	}
 
@@ -132,7 +132,7 @@ func Directory(resp http.ResponseWriter, req *http.Request, config Config) {
 	page := string(content)
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "File Not found, but I dont know how this happened its literally hard-coded in")
 		return
 	}
 	pageTemplate, err = pageTemplate.Parse(page)
@@ -156,7 +156,7 @@ func SignIn(resp http.ResponseWriter, req *http.Request, config Config) {
 	page := string(content)
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "Parsing error, please try again with fewer cosmic rays")
 		return
 	}
 	pageTemplate, err = pageTemplate.Parse(page)
@@ -190,7 +190,7 @@ func LoginHandler(resp http.ResponseWriter, req *http.Request, config Config) {
 	log.Traceln(captchaResponse)
 	_, err := checkCaptcha(captchaResponse, config.RecaptchaPrivKey)
 	if err != nil {
-		ErrorHandler(resp, req, 429)
+		ErrorHandler(resp, req, 429, "Humans only sir (bad captcha)")
 		log.Errorf("Wrong Captcha = %v", err)
 		return
 	}
@@ -211,7 +211,7 @@ func SendImg(resp http.ResponseWriter, req *http.Request, img string, config Con
 	db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", config.SQLAcc))
 	if err != nil {
 		log.Errorln("Oh noez, could not connect to database")
-		ErrorHandler(resp, req, 500)
+		ErrorHandler(resp, req, 500, "Internal Error")
 		return
 	}
 	log.Traceln("Oi, mysql did thing")
@@ -223,30 +223,24 @@ func SendImg(resp http.ResponseWriter, req *http.Request, img string, config Con
 	if len(img) != config.ImgHash {
 		//img = defaultImg //if no image exists, use testing image
 		//fmt.Println("Using Default Image")
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "Invalid URL Format")
 		log.Errorln("Well this is awkward, our hash is bad, sending 404")
 		return
 	}
 	firstChar := string(img[0])
 	secondChar := string(img[1])
 
-	if err != nil {
-		//File not found, send 404
-		ErrorHandler(resp, req, http.StatusNotFound)
-		log.Errorf("ERROR: %s", err)
-		return
-	}
 	var filename string
 	err = db.QueryRow("SELECT filename FROM files WHERE hash=?", img).Scan(&filename)
 
 	switch {
 	case err == sql.ErrNoRows:
 		log.Errorln("File not in db..")
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "File not found")
 		return
 	case err != nil:
 		log.Errorln(err)
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "File not found")
 		return
 	default:
 		log.Traceln("Filename from sql is:", filename)
@@ -292,10 +286,11 @@ func SendImg(resp http.ResponseWriter, req *http.Request, img string, config Con
 }
 
 //ErrorHandler is a function to handle HTTP errors
-func ErrorHandler(resp http.ResponseWriter, req *http.Request, status int) {
+func ErrorHandler(resp http.ResponseWriter, req *http.Request, status int, alert string) {
 	resp.WriteHeader(status)
 	log.Error("artifical http error: ", status)
-	fmt.Fprint(resp, "custom ", status)
+	fmt.Fprintf(resp, "You have found an error! This error is of type %v. Built in alert: \n'%v',\n Would you like a <a href='https://http.cat/%v'>cat</a> or a <a href='https://httpstatusdogs.com/%v'>dog?</a>",
+		status, alert, status, status)
 }
 
 // ReadKeys reads a key file from disk, returning a map to use in verification.
@@ -539,7 +534,7 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 	captcha, err := checkCaptcha(captchaResponse, config.RecaptchaPrivKey)
 	if err != nil || !captcha {
 		if err != nil {
-			ErrorHandler(resp, req, 429)
+			ErrorHandler(resp, req, 429, "you're either skynet, or you messed up the captcha")
 			log.Errorf("Wrong Captcha = %v", err)
 			return
 		}
@@ -586,11 +581,11 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 		case nil:
 		case http.ErrMissingFile:
 			log.Error("NO FILE")
-			fmt.Fprintln(resp, "NO FILE")
+			ErrorHandler(resp, req, 400, "Why is attaching a file so hard for you?")
 			return
 		default:
 			log.Error(err)
-			ErrorHandler(resp, req, 404)
+			ErrorHandler(resp, req, 500, "idk, maybe try again?")
 			return
 		}
 		defer file.Close()
