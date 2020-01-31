@@ -19,8 +19,8 @@ import (
 
 	"../../sessions"
 
-	recaptcha "github.com/ezzarghili/recaptcha-go"
 	"github.com/gidoBOSSftw5731/log"
+	"github.com/haisum/recaptcha"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -55,8 +55,8 @@ const (
 
 //tData is a struct for HTTP inputs.
 type tData struct {
-	Fn string
-	Tn string
+	CaptchaPub string
+	URLPrefix  string
 }
 
 //FileHeader is used for when you download a file from the client. It stores all relevant information in Header.
@@ -96,15 +96,15 @@ type Cookie struct {
 //AppPage is a standard func for the setup of the main page.
 func AppPage(resp http.ResponseWriter, req *http.Request, config Config) {
 	firstPageTemplate := template.New("first page templated.")
+
 	content, err := ioutil.ReadFile("server/firstPage.html")
-	firstPage := string(content)
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "File Not found, Oopsie doopsie")
 		return
 	}
-	firstPageTemplate, err = firstPageTemplate.Parse(fmt.Sprintf(firstPage, config.RecaptchaPubKey, config.URLPrefix, config.RecaptchaPubKey,
-		config.RecaptchaPubKey, config.RecaptchaPubKey))
+
+	firstPageTemplate, err = firstPageTemplate.Parse(string(content))
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
@@ -112,8 +112,8 @@ func AppPage(resp http.ResponseWriter, req *http.Request, config Config) {
 	req.ParseForm()
 
 	tData := tData{ //template data
-		Fn: "",
-	}
+		config.RecaptchaPubKey,
+		config.URLPrefix}
 	//upload(resp, req)
 	//log.Traceln("Form data: ", field, "\ntData: ", tData)
 	err = firstPageTemplate.Execute(resp, tData)
@@ -132,7 +132,7 @@ func Directory(resp http.ResponseWriter, req *http.Request, config Config) {
 	page := string(content)
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "File Not found, but I dont know how this happened its literally hard-coded in")
 		return
 	}
 	pageTemplate, err = pageTemplate.Parse(page)
@@ -156,20 +156,20 @@ func SignIn(resp http.ResponseWriter, req *http.Request, config Config) {
 	page := string(content)
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "Parsing error, please try again with fewer cosmic rays")
 		return
 	}
-	pageTemplate, err = pageTemplate.Parse(fmt.Sprintf(page, config.RecaptchaPubKey, config.URLPrefix, config.RecaptchaPubKey, config.URLPrefix, config.RecaptchaPubKey))
+	pageTemplate, err = pageTemplate.Parse(page)
 	if err != nil {
 		log.Errorf("Failed to parse template: %v", err)
 		return
 	}
 	req.ParseForm()
-	field := req.FormValue("fn")
+	//field := req.FormValue("fn")
 	//fmt.Println(field)
 	tData := tData{
-		Fn: field,
-	}
+		config.RecaptchaPubKey,
+		config.URLPrefix}
 	//upload(resp, req)
 	//log.Traceln("Form data: ", field, "\ntData: ", tData)
 	err = pageTemplate.Execute(resp, tData)
@@ -187,10 +187,10 @@ func LoginHandler(resp http.ResponseWriter, req *http.Request, config Config) {
 	req.ParseForm()
 
 	captchaResponse := req.FormValue("g-recaptcha-response")
-	log.Traceln(captchaResponse)
+	//log.Traceln(captchaResponse)
 	_, err := checkCaptcha(captchaResponse, config.RecaptchaPrivKey)
 	if err != nil {
-		ErrorHandler(resp, req, 429)
+		ErrorHandler(resp, req, 429, "Humans only sir (bad captcha)")
 		log.Errorf("Wrong Captcha = %v", err)
 		return
 	}
@@ -211,14 +211,11 @@ func SendImg(resp http.ResponseWriter, req *http.Request, img string, config Con
 	db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", config.SQLAcc))
 	if err != nil {
 		log.Errorln("Oh noez, could not connect to database")
+		ErrorHandler(resp, req, 500, "Internal Error")
 		return
 	}
 	log.Traceln("Oi, mysql did thing")
 
-	if err != nil {
-		log.Errorln("Oh noez, could not connect to database")
-		return
-	}
 	defer db.Close() // end of SQL opening
 	imgSplit := strings.Split(img, ".")
 	img = imgSplit[0]
@@ -226,30 +223,24 @@ func SendImg(resp http.ResponseWriter, req *http.Request, img string, config Con
 	if len(img) != config.ImgHash {
 		//img = defaultImg //if no image exists, use testing image
 		//fmt.Println("Using Default Image")
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "Invalid URL Format")
 		log.Errorln("Well this is awkward, our hash is bad, sending 404")
 		return
 	}
 	firstChar := string(img[0])
 	secondChar := string(img[1])
 
-	if err != nil {
-		//File not found, send 404
-		ErrorHandler(resp, req, http.StatusNotFound)
-		log.Errorf("ERROR: %s", err)
-		return
-	}
 	var filename string
 	err = db.QueryRow("SELECT filename FROM files WHERE hash=?", img).Scan(&filename)
 
 	switch {
 	case err == sql.ErrNoRows:
 		log.Errorln("File not in db..")
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "File not found")
 		return
 	case err != nil:
 		log.Errorln(err)
-		ErrorHandler(resp, req, 404)
+		ErrorHandler(resp, req, 404, "File not found")
 		return
 	default:
 		log.Traceln("Filename from sql is:", filename)
@@ -295,10 +286,11 @@ func SendImg(resp http.ResponseWriter, req *http.Request, img string, config Con
 }
 
 //ErrorHandler is a function to handle HTTP errors
-func ErrorHandler(resp http.ResponseWriter, req *http.Request, status int) {
+func ErrorHandler(resp http.ResponseWriter, req *http.Request, status int, alert string) {
 	resp.WriteHeader(status)
 	log.Error("artifical http error: ", status)
-	fmt.Fprint(resp, "custom ", status)
+	fmt.Fprintf(resp, "You have found an error! This error is of type %v. Built in alert: \n'%v',\n Would you like a <a href='https://http.cat/%v'>cat</a> or a <a href='https://httpstatusdogs.com/%v'>dog?</a>",
+		status, alert, status, status)
 }
 
 // ReadKeys reads a key file from disk, returning a map to use in verification.
@@ -508,22 +500,24 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc stri
 //uses recaptcha v3
 func checkCaptcha(response, priv string) (bool, error) {
 	var err error
-	var isValid bool
 
-	captcha, err := recaptcha.NewReCAPTCHA(priv, recaptcha.V3, 10*time.Second)
-	if err != nil {
-		return false, err
+	re := recaptcha.R{
+		Secret: priv,
 	}
-	err = captcha.VerifyWithOptions(response, recaptcha.VerifyOption{Action: "homepage", Threshold: .5})
-	if err != nil {
-		isValid = true
+	//req2 := req
+	//log.Traceln(response)
+	isValid := re.VerifyResponse(response) // recaptcha
+	if !isValid {
+		//fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
+		err = fmt.Errorf("Invalid Captcha! These errors ocurred: %v", re.LastError())
+	} else {
+		log.Traceln("recieved a valid captcha response!")
 	}
 
 	if false { // solely for testing, since I sometimes work offline, should be false on prod machines
 		isValid = true
 		err = nil
 	}
-
 	return isValid, err
 }
 
@@ -542,7 +536,7 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 	captcha, err := checkCaptcha(captchaResponse, config.RecaptchaPrivKey)
 	if err != nil || !captcha {
 		if err != nil {
-			ErrorHandler(resp, req, 429)
+			ErrorHandler(resp, req, 429, "you're either skynet, or you messed up the captcha")
 			log.Errorf("Wrong Captcha = %v", err)
 			return
 		}
@@ -562,7 +556,8 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 		log.Debugln("Key success!")
 	} else {
 		log.Errorln("Invalid/no key")
-		fmt.Fprintln(resp, "Invalid/No key!!!")
+		//fmt.Fprintln(resp, "Invalid/No key!!!")
+		ErrorHandler(resp, req, 400, "Are we really real? (invalid or no key)")
 		return
 	}
 
@@ -582,18 +577,18 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 		//req.ParseForm()
 		//img := req.FormFile("img")
 		log.Trace("It's POST for the upload")
-		crutime := time.Now().Unix()
-		log.Trace("Beep Beep Beep... The time is:", crutime)
+		//crutime := time.Now().Unix()
+		//log.Trace("Beep Beep Beep... The time is:", crutime)
 		file, handler, err := req.FormFile("uploadfile") // Saving file to memory
 		switch err {
 		case nil:
 		case http.ErrMissingFile:
 			log.Error("NO FILE")
-			fmt.Fprintln(resp, "NO FILE")
+			ErrorHandler(resp, req, 400, "Why is attaching a file so hard for you?")
 			return
 		default:
 			log.Error(err)
-			ErrorHandler(resp, req, 404)
+			ErrorHandler(resp, req, 500, "idk, maybe try again?")
 			return
 		}
 		defer file.Close()
@@ -639,7 +634,7 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 		}
 		filepath := path.Join(config.ImgStore, firstChar, secondChar, sqlFilename)
 		f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666) // WRONLY means Write only
-		log.Trace("filename?: ", filepath)
+		log.Traceln("filename?: ", filepath)
 		if err != nil {
 			log.Error(err)
 			return
@@ -654,11 +649,11 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 			log.Error("No file written, error!: ", written)
 			return
 		}
-		log.Infof("Saved file at %v!", crutime)
+		//log.Infof("Saved file at %v!", crutime)
 		fileURL := config.BaseURL + config.URLPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 	} else {
-		fmt.Fprintln(resp, "POST requests only")
+		ErrorHandler(resp, req, http.StatusMethodNotAllowed, "Please use a POST request")
 	}
 	return
 	//return encodedMd5, err

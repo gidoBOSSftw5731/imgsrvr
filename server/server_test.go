@@ -1,5 +1,7 @@
 package server
 
+//lol this is almost certainly broken
+
 import (
 	"path/filepath"
 	"testing"

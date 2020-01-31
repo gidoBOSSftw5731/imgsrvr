@@ -5,18 +5,18 @@
 <meta name="google-site-verification" content="2QLKtDFPPQwFab4Tx2Gf0TJ1SVMI1lSA4VfKsA90SaY" /> <!-- ssshhh... -->
 <title>Imagen Dot Click</title>
 <link rel="stylesheet" type="text/css" href="css/global.css" />
-<script src='https://www.google.com/recaptcha/api.js?render=%v'></script>
+<script src='https://www.google.com/recaptcha/api.js' async defer></script>
 <meta name="msvalidate.01" content="864046E07A1B992B74A4682F7D3CCD7E" />
 </head>
 <div id="container">
 <body>
 <div id="header">
     <h1>IMAGEN.CLICK</h1>
-<h4> <a href="https://github.com/gidoBOSSftw5731/imgsrvr/tree/master"> See the code! </h4></a>
+<h4> <a href="https://github.com/gidoBOSSftw5731/imgsrvr/"> See the code! </h4></a>
 </div>
 <div id="form">
     
-<form enctype="multipart/form-data" action="%supload/" method="post" id="uploadform">
+<form enctype="multipart/form-data" action="{{.URLPrefix}}upload/" method="post" id="uploadform">
     <div id="loggedout">
     To save your Sign-In info, go to <a href="/login">the login page below!</a> <br>
     Username: <input type="text" name="user"><br>
@@ -25,34 +25,26 @@
 	<label for="upload" class="upload">
     IMG: <input type="file"  id="upload" name="uploadfile"><br>
     </label>
-    <div id="captcha">
-        <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response">
-        <input type="hidden" name="action" value="homepage">
-    </div>
+
     <div id="status"></div>
 	<div id="submit">
-        <button class="g-recaptcha" data-sitekey="%v" id="submit"
-            data-callback="document.getElementById('uploadform').submit()" data-badge="inline" type="submit">
-           Go!</button>    
+        <div id="submit">
+            <button class="g-recaptcha" data-sitekey="{{.CaptchaPub}}" data-callback='onSubmit'>Go!</button>
+        </div>   
         </div>
     </form>
 </div>
     
 <div id="footer">
-        <a href="%v"> Home Page </a>&nbsp;&nbsp;  <a id='loggedout' href="/login"> Log In </a>&nbsp;&nbsp;  <a id='loggedin' href="/logout"> LogOut </a>&nbsp;&nbsp;<a href="directory"> Directory </a>
+        <a href="{{.URLPrefix}}"> Home Page </a>&nbsp;&nbsp;  <a id='loggedout' href="/login"> Log In </a>&nbsp;&nbsp;  <a id='loggedin' href="/logout"> LogOut </a>&nbsp;&nbsp;<a href="directory"> Directory </a>
 </div>
 
+
 <script>
-        grecaptcha.ready(function() {
-        // do request for recaptcha token
-        // response is promise with passed token
-            grecaptcha.execute('%v', {action:'homepage'})
-                      .then(function(token) {
-                // add token value to form
-                document.getElementById('g-recaptcha-response').value = token;
-            });
-        });
-    </script>
+    function onSubmit(token) {
+      document.getElementById("uploadform").submit();
+    }
+  </script>
 
 <script>
         var sessval = httpGet( "/verifysession" );

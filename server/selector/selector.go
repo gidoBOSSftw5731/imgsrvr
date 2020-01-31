@@ -30,7 +30,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 	case "i", "I":
 		// Checks for hash/element/thing
 		if obj.URLSplit[obj.I1] == "" {
-			tools.ErrorHandler(obj.Resp, obj.Req, http.StatusNotFound)
+			tools.ErrorHandler(obj.Resp, obj.Req, http.StatusNotFound, "Try specifying something!")
 			return
 		}
 		log.Tracef("urlECount of IMG: %d\n", obj.URLECount)
@@ -54,7 +54,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 	case "js":
 		i := obj.SwitchLen + 2
 		if i >= len(obj.URLSplit)+1 {
-			tools.ErrorHandler(obj.Resp, obj.Req, 404)
+			tools.ErrorHandler(obj.Resp, obj.Req, 404, "I hate it too, dont worry")
 			return
 		}
 		buf := "/"
@@ -81,7 +81,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		ok, err := sessions.Verify(obj.Resp, obj.Req, config.SQLAcc, &user)
 		if err != nil && err != fmt.Errorf("INVALID") {
 			log.Errorln(err)
-			tools.ErrorHandler(obj.Resp, obj.Req, 500)
+			tools.ErrorHandler(obj.Resp, obj.Req, 401, "quien es?")
 			return
 		}
 		fmt.Fprintln(obj.Resp, ok)
@@ -94,7 +94,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 			http.ServeFile(obj.Resp, obj.Req, path.Join(wd, "server/selector/modules/ProjectMoocow/web/templates/main.css"))
 			return
 		} else if obj.URLECount < 4 {
-			tools.ErrorHandler(obj.Resp, obj.Req, 404)
+			tools.ErrorHandler(obj.Resp, obj.Req, 404, "Malformed URL")
 			return
 		}
 
@@ -104,7 +104,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		discord, err := moocowtools.DiscordSession(moocowconfig)
 		if err != nil {
 			log.Errorln(err)
-			tools.ErrorHandler(obj.Resp, obj.Req, 500)
+			tools.ErrorHandler(obj.Resp, obj.Req, 500, "Check Discord's status or try again")
 			return
 		}
 
@@ -118,14 +118,14 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 			path.Join(wd, "server/selector/modules/ProjectMoocow/web/templates"))
 		if err != nil {
 			log.Errorln(err)
-			tools.ErrorHandler(obj.Resp, obj.Req, 500)
+			tools.ErrorHandler(obj.Resp, obj.Req, 500, "idk what you want, have you tried turning it off and on again?")
 			return
 		}
 
 		tmpFile, err := ioutil.TempFile(os.TempDir(), "prefix-")
 		if err != nil {
 			log.Errorln(err)
-			tools.ErrorHandler(obj.Resp, obj.Req, 500)
+			tools.ErrorHandler(obj.Resp, obj.Req, 500, "This probably wasnt your fault, for once")
 			return
 		}
 		defer os.Remove(tmpFile.Name())
@@ -133,7 +133,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		_, err = tmpFile.Write([]byte(webpage))
 		if err != nil {
 			log.Errorln(err)
-			tools.ErrorHandler(obj.Resp, obj.Req, 500)
+			tools.ErrorHandler(obj.Resp, obj.Req, 500, "please spare me from your wrath")
 			return
 		}
 
@@ -146,7 +146,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		//raven.RecoveryHandler(appPage(obj.Resp, obj.Req, config))
 		tools.AppPage(obj.Resp, obj.Req, config)
 	default:
-		tools.ErrorHandler(obj.Resp, obj.Req, 404)
+		tools.ErrorHandler(obj.Resp, obj.Req, 404, "idk what you want, I dont get paid enough to read minds")
 	}
 
 }
