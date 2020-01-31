@@ -19,8 +19,8 @@ import (
 
 	"../../sessions"
 
-	recaptcha "github.com/ezzarghili/recaptcha-go"
 	"github.com/gidoBOSSftw5731/log"
+	"github.com/haisum/recaptcha"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -187,7 +187,7 @@ func LoginHandler(resp http.ResponseWriter, req *http.Request, config Config) {
 	req.ParseForm()
 
 	captchaResponse := req.FormValue("g-recaptcha-response")
-	log.Traceln(captchaResponse)
+	//log.Traceln(captchaResponse)
 	_, err := checkCaptcha(captchaResponse, config.RecaptchaPrivKey)
 	if err != nil {
 		ErrorHandler(resp, req, 429, "Humans only sir (bad captcha)")
@@ -500,22 +500,24 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc stri
 //uses recaptcha v3
 func checkCaptcha(response, priv string) (bool, error) {
 	var err error
-	var isValid bool
 
-	captcha, err := recaptcha.NewReCAPTCHA(priv, recaptcha.V3, 10*time.Second)
-	if err != nil {
-		return false, err
+	re := recaptcha.R{
+		Secret: priv,
 	}
-	err = captcha.VerifyWithOptions(response, recaptcha.VerifyOption{Action: "homepage", Threshold: .5})
-	if err == nil {
-		isValid = true
+	//req2 := req
+	//log.Traceln(response)
+	isValid := re.VerifyResponse(response) // recaptcha
+	if !isValid {
+		//fmt.Fprintf(resp, "Invalid Captcha! These errors ocurred: %v", re.LastError())
+		err = fmt.Errorf("Invalid Captcha! These errors ocurred: %v", re.LastError())
+	} else {
+		log.Traceln("recieved a valid captcha response!")
 	}
 
 	if false { // solely for testing, since I sometimes work offline, should be false on prod machines
 		isValid = true
 		err = nil
 	}
-
 	return isValid, err
 }
 
@@ -575,8 +577,8 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 		//req.ParseForm()
 		//img := req.FormFile("img")
 		log.Trace("It's POST for the upload")
-		crutime := time.Now().Unix()
-		log.Trace("Beep Beep Beep... The time is:", crutime)
+		//crutime := time.Now().Unix()
+		//log.Trace("Beep Beep Beep... The time is:", crutime)
 		file, handler, err := req.FormFile("uploadfile") // Saving file to memory
 		switch err {
 		case nil:
@@ -632,7 +634,7 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 		}
 		filepath := path.Join(config.ImgStore, firstChar, secondChar, sqlFilename)
 		f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666) // WRONLY means Write only
-		log.Trace("filename?: ", filepath)
+		log.Traceln("filename?: ", filepath)
 		if err != nil {
 			log.Error(err)
 			return
@@ -647,11 +649,11 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 			log.Error("No file written, error!: ", written)
 			return
 		}
-		log.Infof("Saved file at %v!", crutime)
+		//log.Infof("Saved file at %v!", crutime)
 		fileURL := config.BaseURL + config.URLPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 	} else {
-		fmt.Fprintln(resp, "POST requests only")
+		ErrorHandler(resp, req, http.StatusMethodNotAllowed, "Please use a POST request")
 	}
 	return
 	//return encodedMd5, err

@@ -1,7 +1,7 @@
 <html>
 	<head>
         <link rel="stylesheet" type="text/css" href="css/global.css" />
-        <script src='https://www.google.com/recaptcha/api.js?render={{.CaptchaPub}}' defer async></script>
+        <script src='https://www.google.com/recaptcha/api.js' defer async></script>
         <title>Imagen Dot Click: Sign In</title>
     </head>
     <body>
@@ -13,18 +13,13 @@
             <form action="{{.URLPrefix}}loginhandler/" method="post" id="form">
                 Username: <input type="text" name="user"><br>
                 Key: <input type="password" name="fn"><br>
-                <div id=captcha>
-                        <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response">
-                        <input type="hidden" name="action" value="homepage">
-                </div>
+
                 <div id="status"></div>
                 <script type="text/javascript">
                     document.write(qs("issue"));
                 </script>
                 <div id="submit">
-                        <button class="g-recaptcha" data-sitekey="{{.CaptchaPub}}" id="submit"
-            data-callback="document.getElementById('form').submit()" data-badge="inline" type="submit">
-           Go!</button>
+                    <button class="g-recaptcha" data-sitekey="{{.CaptchaPub}}" data-callback='onSubmit'>Go!</button>
                 </div>
                 </form>
             </div>
@@ -33,16 +28,11 @@
         </div>  
 
         <script>
-                grecaptcha.ready(function() {
-                // do request for recaptcha token
-                // response is promise with passed token
-                    grecaptcha.execute('{{.CaptchaPub}}', {action:'homepage'})
-                              .then(function(token) {
-                        // add token value to form
-                        document.getElementById('g-recaptcha-response').value = token;
-                    });
-                });
-            </script>
+            function onSubmit(token) {
+              document.getElementById("form").submit();
+            }
+          </script>
+     
 
         </body>
 </html>
