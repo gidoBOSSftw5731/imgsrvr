@@ -11,6 +11,7 @@ import (
 	"../sessions"
 	moocowtools "./modules/ProjectMoocow/tools"
 	moocow "./modules/ProjectMoocow/web"
+	"./modules/dwarfism-2.0/dwarfism"
 	"./tools"
 	"github.com/gidoBOSSftw5731/log"
 )
@@ -142,6 +143,10 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		tmpFile.Close()
 		discord.Close()
 
+	case "d":
+		dwarfism.ShortPage(obj.Resp, obj.Req, config)
+	case "dform":
+		dwarfism.ShortResp(obj.Resp, obj.Req, config)
 	case "":
 		//raven.RecoveryHandler(appPage(obj.Resp, obj.Req, config))
 		tools.AppPage(obj.Resp, obj.Req, config)
