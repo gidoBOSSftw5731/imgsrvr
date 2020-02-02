@@ -55,8 +55,9 @@ const (
 
 //TData is a struct for HTTP inputs.
 type TData struct {
-	CaptchaPub string
-	URLPrefix  string
+	CaptchaPub  string
+	URLPrefix   string
+	ExtraString string
 }
 
 //FileHeader is used for when you download a file from the client. It stores all relevant information in Header.
@@ -113,7 +114,8 @@ func AppPage(resp http.ResponseWriter, req *http.Request, config Config) {
 
 	tData := TData{ //template data
 		config.RecaptchaPubKey,
-		config.URLPrefix}
+		config.URLPrefix,
+		""}
 	//upload(resp, req)
 	//log.Traceln("Form data: ", field, "\ntData: ", tData)
 	err = firstPageTemplate.Execute(resp, tData)
@@ -169,7 +171,8 @@ func SignIn(resp http.ResponseWriter, req *http.Request, config Config) {
 	//fmt.Println(field)
 	tData := TData{
 		config.RecaptchaPubKey,
-		config.URLPrefix}
+		config.URLPrefix,
+		""}
 	//upload(resp, req)
 	//log.Traceln("Form data: ", field, "\ntData: ", tData)
 	err = pageTemplate.Execute(resp, tData)

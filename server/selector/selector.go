@@ -30,6 +30,10 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 	switch obj.URLSplit[obj.SwitchLen] {
 	case "i", "I":
 		// Checks for hash/element/thing
+		if len(obj.URLSplit) != obj.I1+1 {
+			tools.ErrorHandler(obj.Resp, obj.Req, 400, "No file, No result")
+			return
+		}
 		if obj.URLSplit[obj.I1] == "" {
 			tools.ErrorHandler(obj.Resp, obj.Req, http.StatusNotFound, "Try specifying something!")
 			return
@@ -143,10 +147,18 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		tmpFile.Close()
 		discord.Close()
 
-	case "d":
-		dwarfism.ShortPage(obj.Resp, obj.Req, config)
+	case "dwarfism2.0":
+		dwarfism.ShortPage(obj.Resp, obj.Req, config, "")
 	case "dform":
 		dwarfism.ShortResp(obj.Resp, obj.Req, config)
+	case "d":
+		// Checks for hash/element/thing
+		if len(obj.URLSplit) != obj.I1+1 {
+			http.Redirect(obj.Resp, obj.Req, "/dwarfism2.0/", http.StatusSeeOther)
+			return
+		}
+
+		dwarfism.Biggify(obj.Resp, obj.Req, config, obj.URLSplit[obj.I1])
 	case "":
 		//raven.RecoveryHandler(appPage(obj.Resp, obj.Req, config))
 		tools.AppPage(obj.Resp, obj.Req, config)
