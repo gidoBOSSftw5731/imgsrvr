@@ -47,7 +47,7 @@ func getClientIP(req *http.Request) string {
 }
 
 const (
-	allowedChars = "!#$%&'()*+,-./23456789:<=>?@ABCDEFGHJKLMNOPRSTUVWXYZ[]^_abcdefghijkmnopqrstuvwxyz{|}~" // 85 chars
+	allowedChars = "!#$%&'()*+,-./123456789:<=>?@ABCDEFGHJKLMNOPRSTUVWXYZ[]^_abcdefghijkmnopqrstuvwxyz{|}~" // 86 chars
 )
 
 func startSQL(sqlAcc string) *sql.DB {
