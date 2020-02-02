@@ -53,8 +53,8 @@ const (
 	cost     = 15
 )
 
-//tData is a struct for HTTP inputs.
-type tData struct {
+//TData is a struct for HTTP inputs.
+type TData struct {
 	CaptchaPub string
 	URLPrefix  string
 }
@@ -111,7 +111,7 @@ func AppPage(resp http.ResponseWriter, req *http.Request, config Config) {
 	}
 	req.ParseForm()
 
-	tData := tData{ //template data
+	tData := TData{ //template data
 		config.RecaptchaPubKey,
 		config.URLPrefix}
 	//upload(resp, req)
@@ -167,7 +167,7 @@ func SignIn(resp http.ResponseWriter, req *http.Request, config Config) {
 	req.ParseForm()
 	//field := req.FormValue("fn")
 	//fmt.Println(field)
-	tData := tData{
+	tData := TData{
 		config.RecaptchaPubKey,
 		config.URLPrefix}
 	//upload(resp, req)
