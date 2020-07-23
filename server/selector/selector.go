@@ -1,7 +1,10 @@
 package selector
 
 import (
+	"database/sql"
+	"encoding/json"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -11,6 +14,7 @@ import (
 	"../sessions"
 	moocowtools "./modules/ProjectMoocow/tools"
 	moocow "./modules/ProjectMoocow/web"
+	tb "./modules/ProjectTapebucket"
 	"./modules/dwarfism-2.0/dwarfism"
 	"./tools"
 	"github.com/gidoBOSSftw5731/log"
@@ -23,6 +27,10 @@ type Caseable struct {
 	Resp                                            http.ResponseWriter
 	Req                                             *http.Request
 }
+
+var (
+	empty = ""
+)
 
 //SwitchStatement is a function holding a switch statement. it is in its own file so that
 // webmasters may edit it to fit their configuration
@@ -71,6 +79,20 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 
 	case "minePageVar.css", "firstPage.css", "todoPageVar.css":
 		http.ServeFile(obj.Resp, obj.Req, "server/"+obj.URLSplit[obj.SwitchLen])
+	case "verifycaptcha":
+		if len(obj.URLSplit) != obj.I1+1 {
+			tools.ErrorHandler(obj.Resp, obj.Req, 429, "recaptcha failed")
+			return
+		}
+
+		valid, err := tools.CheckCaptcha(obj.URLSplit[obj.I1], config.RecaptchaPrivKey)
+		if err != nil || !valid {
+			log.Errorln("Captcha error: ", err)
+			tools.ErrorHandler(obj.Resp, obj.Req, 500, "captcha error idk")
+			return
+		}
+
+		fmt.Fprint(obj.Resp, valid)
 	case "github", "git":
 		github := "https://github.com/gidoBOSSftw5731"
 		http.Redirect(obj.Resp, obj.Req, github, http.StatusSeeOther)
@@ -159,6 +181,94 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		}
 
 		dwarfism.Biggify(obj.Resp, obj.Req, config, obj.URLSplit[obj.I1])
+	case "submitpaste":
+		if obj.Req.Method != "POST" {
+			tools.ErrorHandler(obj.Resp, obj.Req, 400, "Must be post")
+			return
+		}
+
+		// I realize now that I am not going to copy over this struct every time
+		req := obj.Req
+		resp := &obj.Resp
+
+		db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", config.SQLAcc))
+		if err != nil {
+			tools.ErrorHandler(*resp, req, 500, "error adding to db")
+			log.Error("Oh noez, could not connect to database")
+			return
+		}
+		log.Debug("Oi, mysql did thing")
+		defer db.Close()
+		// end of SQL opening
+
+		//paste := req.FormValue("paste") // Saving paste to memory
+		type out struct {
+			Paste string
+		}
+		var u out
+		err = json.NewDecoder(req.Body).Decode(&u)
+		if err != nil {
+			tools.ErrorHandler(*resp, req, 500, "json error")
+			log.Errorln(err)
+			return
+		}
+
+		var user string
+		sessions.Verify(*resp, req, config.SQLAcc, &user)
+
+		if user == "" {
+			user = "anon"
+		}
+
+		url, err := tb.AddToDB(&u.Paste, &user, db)
+		if err != nil {
+			tools.ErrorHandler(*resp, req, 500, "error adding to db")
+			log.Errorln(err)
+			return
+		}
+		fmt.Fprintf(*resp, "p/%v", url)
+		log.Debugf("added paste %v", url)
+	case "p", "P":
+		// I realize now that I am not going to copy over this struct every time
+		req := obj.Req
+		resp := &obj.Resp
+
+		db, err := sql.Open("mysql", fmt.Sprintf("%s@tcp(127.0.0.1:3306)/ImgSrvr", config.SQLAcc))
+		if err != nil {
+			tools.ErrorHandler(*resp, req, 500, "error adding to db")
+			log.Error("Oh noez, could not connect to database")
+			return
+		}
+		log.Debug("Oi, mysql did thing")
+		defer db.Close()
+		// end of SQL opening
+
+		templatePath := "./server/selector/modules/ProjectTapebucket/index.html"
+		templateContents, _ := ioutil.ReadFile(templatePath)
+
+		paste := &empty
+		if obj.URLECount != 2 {
+			// look for the paste
+			pasteurl := obj.URLSplit[2]
+			paste, err = tb.ReturnFromDB(pasteurl, db)
+			if err != nil {
+				tools.ErrorHandler(*resp, req, 500, "error getting from db, is the URL correct?")
+				log.Error(err)
+				return
+			}
+		}
+
+		type tmpl struct {
+			Paste string
+		}
+		t := template.New("paste")
+		t, _ = t.Parse(string(templateContents))
+		if err := t.Execute(*resp, tmpl{*paste}); err != nil {
+			tools.ErrorHandler(*resp, req, 500, "templating error")
+			log.Error(err)
+			return
+		}
+
 	case "":
 		//raven.RecoveryHandler(appPage(obj.Resp, obj.Req, config))
 		tools.AppPage(obj.Resp, obj.Req, config)

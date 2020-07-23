@@ -191,7 +191,7 @@ func LoginHandler(resp http.ResponseWriter, req *http.Request, config Config) {
 
 	captchaResponse := req.FormValue("g-recaptcha-response")
 	//log.Traceln(captchaResponse)
-	_, err := checkCaptcha(captchaResponse, config.RecaptchaPrivKey)
+	_, err := CheckCaptcha(captchaResponse, config.RecaptchaPrivKey)
 	if err != nil {
 		ErrorHandler(resp, req, 429, "Humans only sir (bad captcha)")
 		log.Errorf("Wrong Captcha = %v", err)
@@ -500,8 +500,8 @@ func checkKey(resp http.ResponseWriter, req *http.Request, inputKey, sqlAcc stri
 	return false, true // session bad key good
 }
 
-//uses recaptcha v3
-func checkCaptcha(response, priv string) (bool, error) {
+// CheckCaptcha verifies a captcha response using recaptcha v2
+func CheckCaptcha(response, priv string) (bool, error) {
 	var err error
 
 	re := recaptcha.R{
@@ -536,7 +536,7 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 	captchaResponse := req.FormValue("g-recaptcha-response")
 	//log.Traceln(captchaResponse)
 
-	captcha, err := checkCaptcha(captchaResponse, config.RecaptchaPrivKey)
+	captcha, err := CheckCaptcha(captchaResponse, config.RecaptchaPrivKey)
 	if err != nil || !captcha {
 		if err != nil {
 			ErrorHandler(resp, req, 429, "you're either skynet, or you messed up the captcha")
