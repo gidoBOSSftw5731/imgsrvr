@@ -226,7 +226,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 			log.Errorln(err)
 			return
 		}
-		fmt.Fprintf(*resp, "p/%v", url)
+		fmt.Fprintf(*resp, "/p/%v", url)
 		log.Debugf("added paste %v", url)
 	case "p", "P":
 		// I realize now that I am not going to copy over this struct every time
