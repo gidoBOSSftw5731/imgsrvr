@@ -250,7 +250,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		if obj.URLECount != 2 {
 			// look for the paste
 			pasteurl := obj.URLSplit[2]
-			if pasteurl = "" {
+			if pasteurl == "" {
 				break
 			}
 			paste, err = tb.ReturnFromDB(pasteurl, db)
