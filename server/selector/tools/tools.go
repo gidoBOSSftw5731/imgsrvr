@@ -201,9 +201,9 @@ func LoginHandler(resp http.ResponseWriter, req *http.Request, config Config) {
 	user := req.FormValue("user")
 	_, ok := checkKey(resp, req, req.FormValue("fn"), config.SQLAcc, &user, true)
 	if ok {
-		http.Redirect(resp, req, config.BaseURL+"/", 302)
+		http.Redirect(resp, req, "/", 302)
 	} else {
-		http.Redirect(resp, req, config.BaseURL+"/login"+"?issue=BadUserPass", 302)
+		http.Redirect(resp, req, "/login"+"?issue=BadUserPass", 302)
 		return
 	}
 
@@ -653,7 +653,7 @@ func Upload(resp http.ResponseWriter, req *http.Request, config Config) /*(strin
 			return
 		}
 		//log.Infof("Saved file at %v!", crutime)
-		fileURL := config.BaseURL + config.URLPrefix + "i/" + encodedMd5
+		fileURL := config.URLPrefix + "i/" + encodedMd5
 		http.Redirect(resp, req, fileURL, http.StatusSeeOther)
 	} else {
 		ErrorHandler(resp, req, http.StatusMethodNotAllowed, "Please use a POST request")
