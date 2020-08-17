@@ -12,25 +12,6 @@ import (
 	"github.com/gidoBOSSftw5731/log"
 )
 
-// Cookie is a struct detailing all parts of an http cookie
-type Cookie struct {
-	Name       string
-	Value      string
-	Path       string
-	Domain     string
-	Expires    time.Time
-	RawExpires string
-
-	// MaxAge=0 means no 'Max-Age' attribute specified.
-	// MaxAge<0 means delete cookie now, equivalently 'Max-Age: 0'
-	// MaxAge>0 means Max-Age attribute present and given in seconds
-	MaxAge   int
-	Secure   bool
-	HTTPOnly bool
-	Raw      string
-	Unparsed []string // Raw text of unparsed attribute-value pairs
-}
-
 func fixOldTables(db *sql.DB) {
 	_, err := db.Query("SHOW COLUMNS FROM `sessions` LIKE 'ip';")
 
@@ -38,12 +19,6 @@ func fixOldTables(db *sql.DB) {
 		log.Debugln("fixing mysql sessions")
 		db.Exec("ALTER TABLE sessions CHANGE ip user varchar(255);")
 	}
-}
-
-func getClientIP(req *http.Request) string {
-	ip := req.RemoteAddr
-	ipSplit := strings.Split(":", ip)
-	return ipSplit[0]
 }
 
 const (
@@ -78,7 +53,7 @@ func DeleteKeySite(resp http.ResponseWriter, req *http.Request, sqlAcc string) {
 
 func deleteKey(resp http.ResponseWriter, db *sql.DB, token string) error {
 	_, err := db.Exec(`DELETE FROM sessions WHERE token = ?;`, token)
-	cookie := http.Cookie{Name: "session", Value: "", Expires: time.Now()}
+	cookie := http.Cookie{Name: "session", Value: "", Expires: time.Now(), SameSite: 3}
 	http.SetCookie(resp, &cookie)
 	return err
 }
@@ -102,7 +77,7 @@ func New(resp http.ResponseWriter, req *http.Request, sqlAcc string) error {
 		session += allowedCharsSplit[x]          // Using x to navigate the split for one character
 	}
 
-	cookie := http.Cookie{Name: "session", Value: session, Expires: time.Unix(expiration, 0), Path: "/"}
+	cookie := http.Cookie{Name: "session", Value: session, Expires: time.Unix(expiration, 0), Path: "/", SameSite: 3}
 
 	db := startSQL(sqlAcc)
 	defer db.Close()
