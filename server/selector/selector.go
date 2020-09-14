@@ -247,7 +247,7 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 		templateContents, _ := ioutil.ReadFile(templatePath)
 
 		paste := &empty
-		if obj.URLECount != 2 {
+		if obj.URLECount > 2 {
 			// look for the paste
 			pasteurl := obj.URLSplit[2]
 			if pasteurl == "" {
@@ -257,6 +257,14 @@ func SwitchStatement(config tools.Config, obj Caseable) {
 			if err != nil {
 				tools.ErrorHandler(*resp, req, 500, "error getting from db, is the URL correct?")
 				log.Error(err)
+				return
+			}
+		}
+
+		if obj.URLECount == 4 {
+			switch obj.URLSplit[3] {
+			case "raw":
+				fmt.Fprintln(*resp, *paste)
 				return
 			}
 		}
